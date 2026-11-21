@@ -1,0 +1,9 @@
+# 依存パッケージ・ビルド結果
+node_modules/
+dist/
+
+# Claude Code の個人用設定
+.claude/settings.local.json
+
+# OS
+.DS_Store
