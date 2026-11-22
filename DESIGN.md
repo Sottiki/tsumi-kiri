@@ -350,7 +350,7 @@ components:
 - **タスク表**：幅は `layout.table-width`（820px）で左に固定する。列幅は ID 52 / 名前 可変 / 優先 44 / 工数 56 / 進捗 52 / 残工数 56 / 開始 54 / 終了 54 / 期日 54 / 状態 72（px）
 - **行**：工程の行は `layout.row-phase`（34px）で、帯は上8px・下3px空ける。タスクの行は `layout.row-task`（40px）で、カードは上下3px空ける
 - **階層の字下げ**：カードの左端は `12 + (階層 − 1) × 22` px（`layout.indent-step` = 22px）
-- **ガント**：1日 `layout.day-width`（22px）。見出しは `layout.header-row`（22px）× 3段（月・曜日・日付）。バーは行の上下中央に置き、高さは末端 `layout.bar-leaf`（12px）、親と工程 `layout.bar-parent`（6px）。日の途中で始まる・終わる部分は、その日の幅の中で比率どおりに描く
+- **ガント**：1日 `layout.day-width`（22px）。見出しは `layout.header-row`（22px）× 3段（月・曜日・日付）。バーは行の上下中央に置き、高さは末端 `layout.bar-leaf`（12px）、親と工程 `layout.bar-parent`（6px）。バーは1日1マス単位で描く。日の途中で始まる・終わる日も、その日の幅いっぱいに描く。完了分と残りの塗り分けも1日単位（SPEC 3.1）
 - 見出しは縦にスクロールしても上に固定し、タスク表は横にスクロールしても左に固定する
 - **詳細パネル**：幅 `layout.panel-width`（460px）。画面の上下と右に `layout.panel-inset`（16px）空けて浮かせる。パネルの内側の余白は左右20px
 
