@@ -7,3 +7,10 @@ dist/
 
 # OS
 .DS_Store
+
+# Playwright MCP のスクショなどの出力
+.playwright-mcp/
+
+# Playwright Test の結果
+test-results/
+playwright-report/
