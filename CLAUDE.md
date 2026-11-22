@@ -60,6 +60,7 @@ Playwright MCP（画面の確認に使う）は、さらに次を守る。
 
 - コミット・pushは確認を取らなくてもよい。
 - PRの作成は基本機能ごとに作成する。
+- PR の「確かめたこと」には、レビューする人が自分で打てるコマンド（`npm test`、`npm run test:e2e` など。CI でも流す）で確かめられることだけを書く。コマンドで確かめられないもの（画面案との見比べなど）は「人が見る項目」として分け、何をどう見ればよいかを添える。Claude が Playwright MCP で確かめたことは、確認項目にしない
 - マージは必ず、人の確認を行うこと。OKがない限りマージしないこと。
 - リポジトリ：[https://github.com/Sottiki/tsumi-kiri](https://github.com/Sottiki/tsumi-kiri)（パブリック、MIT License）
 
@@ -73,10 +74,11 @@ Node.js は 26系（`.nvmrc`、Volta で固定）。
 | `npm run dev` | 開発サーバー（http://localhost:5173 ） |
 | `npm test` | テスト（Vitest。`tests/**/*.test.ts`） |
 | `npm run test:watch` | テストを変更のたびに流す |
+| `npm run test:e2e` | 画面のテスト（Playwright Test。`e2e/**/*.spec.ts`）。先にビルドする。初回は `npx playwright install chromium` が必要 |
 | `npm run lint` | ESLint と Prettier の確認 |
 | `npm run format` | Prettier で整形する |
 | `npm run build` | 型の確認と、1つの HTML（`dist/index.html`）へのビルド |
 | `npm run preview` | ビルド結果を開く |
 
-- CI（`.github/workflows/ci.yml`）は、PR と `main` への push で lint・テスト・ビルドを行う
+- CI（`.github/workflows/ci.yml`）は、PR と `main` への push で lint・テスト・ビルド・画面のテストを行う
 - `src/ui/tokens.css` は DESIGN.md のトークンを書き写したもの。DESIGN.md を変えたら、こちらも合わせる

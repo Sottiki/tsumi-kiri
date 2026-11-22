@@ -21,6 +21,7 @@ SPEC.md が「何を作るか」、このファイルは「どう作るか（技
 | ドラッグ | dnd-kit（入れ子の並べ替えとキーボード操作に対応） | 決定 |
 | スタイル | CSS Modules ＋ 色などは CSS 変数（追加のライブラリなし） | 決定 |
 | テスト | Vitest | 決定 |
+| 画面のテスト | Playwright Test（ブラウザで画面を開き、表示と操作を確かめる） | 決定 |
 | 静的チェック | ESLint（typescript-eslint、react-hooks）＋ Prettier | 決定 |
 
 ## 2. フォルダ構成
@@ -40,6 +41,7 @@ src/
     tokens.css       DESIGN.md のトークンを CSS 変数にしたもの
   main.tsx
 tests/             core と excel のテスト（docs/test-cases.md の例を元にする）
+e2e/               画面のテスト（Playwright Test）
 ```
 
 - 依存の向きは `ui → store → core`、`excel → core` の一方向にする。core は React も DOM も使わない
@@ -197,6 +199,8 @@ App
 
 ## 10. テスト・ビルド・公開
 
-- **テスト**：core と excel を Vitest で確かめる。日程計算は docs/test-cases.md の例をそのままテストにする。画面は手で確認し、web-design-guidelines の skill でもレビューする
+- **テスト**：core と excel を Vitest で確かめる。日程計算は docs/test-cases.md の例をそのままテストにする
+- **画面のテスト**：Playwright Test で、開発サーバーの画面と、ビルドした `dist/index.html`（`file://`）を開いて確かめる。画面の大きさは 1512 × 982（等倍）。表示されるもの・操作した結果など、コマンドで確かめられることはここに書く
+- **人が見る確認**：画面案との見比べ（色・寸法）は、テストにせず人が見る。web-design-guidelines の skill でもレビューする
 - **ビルド**：`npm run build` で `dist/index.html` が1つできる。これを PC に置けばそのまま使える
 - **公開**：GitHub Actions で、`main` に入ったらテストとビルドを行い、GitHub Pages に公開する。PR ではテストとビルドだけを行う
