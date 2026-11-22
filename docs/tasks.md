@@ -50,7 +50,7 @@ PR の確認項目は、コマンドで確かめられるもの（CI でも流�
 - [x] 0-6 GitHub Actions：PR と `main` への push で、lint・テスト・ビルドを行う
 - [x] 0-7 CLAUDE.md の「コマンド」に、開発・テスト・ビルドのコマンドを書く
 - [x] 0-8 Playwright MCP を `.mcp.json` に追加する。CLAUDE.md の「MCP・外部ツール」の決まりに従い、開発サーバーの画面を開いてスクショが撮れることを確かめる。`.playwright-mcp/` を `.gitignore` に足す
-- [ ] 0-9 Playwright Test を入れる（`npm run test:e2e`）。開発サーバーの画面と、`file://` で開いた `dist/index.html` を確かめるテストを書き、CI でも流す
+- [x] 0-9 Playwright Test を入れる（`npm run test:e2e`）。開発サーバーの画面と、`file://` で開いた `dist/index.html` を確かめるテストを書き、CI でも流す
   - 画面の大きさは 1512 × 982（MacBook の画面 3024 × 1964 のレイアウト上の大きさ）。普段の見比べは等倍、README などのスクショは2倍（設定ファイルで指定）
 
 ## 段階1：日程の計算（core）
