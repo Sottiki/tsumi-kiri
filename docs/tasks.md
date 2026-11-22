@@ -13,7 +13,7 @@
 
 | 段階 | 内容 | 状態 |
 |---|---|---|
-| 0 | 雛形と CI | 未着手 |
+| 0 | 雛形と CI | 確認待ち |
 | 1 | 日程の計算 | 未着手 |
 | 2 | データの操作と保存形式 | 未着手 |
 | 3 | ストア（状態・保存・元に戻す） | 未着手 |
@@ -39,14 +39,14 @@
 - PR で GitHub Actions のテストとビルドが通る
 
 **タスク**
-- [ ] 0-1 Vite + React 19 + TypeScript の雛形を作る
-- [ ] 0-2 vite-plugin-singlefile を入れ、`base: './'` にする
-- [ ] 0-3 Vitest、ESLint（typescript-eslint・react-hooks）、Prettier を設定する
-- [ ] 0-4 architecture.md 2章のフォルダ構成（core / store / ui / excel / tests）を作る
-- [ ] 0-5 DESIGN.md のトークンから `ui/tokens.css` を作る。書体（Noto Sans JP・Inter）を読み込む
-- [ ] 0-6 GitHub Actions：PR と `main` への push で、lint・テスト・ビルドを行う
-- [ ] 0-7 CLAUDE.md の「コマンド」に、開発・テスト・ビルドのコマンドを書く
-- [ ] 0-8 Playwright MCP を `.mcp.json` に追加する。CLAUDE.md の「MCP・外部ツール」の決まりに従い、開発サーバーの画面を開いてスクショが撮れることを確かめる。`.playwright-mcp/` を `.gitignore` に足す
+- [x] 0-1 Vite + React 19 + TypeScript の雛形を作る
+- [x] 0-2 vite-plugin-singlefile を入れ、`base: './'` にする
+- [x] 0-3 Vitest、ESLint（typescript-eslint・react-hooks）、Prettier を設定する
+- [x] 0-4 architecture.md 2章のフォルダ構成（core / store / ui / excel / tests）を作る
+- [x] 0-5 DESIGN.md のトークンから `ui/tokens.css` を作る。書体（Noto Sans JP・Inter）を読み込む
+- [x] 0-6 GitHub Actions：PR と `main` への push で、lint・テスト・ビルドを行う
+- [x] 0-7 CLAUDE.md の「コマンド」に、開発・テスト・ビルドのコマンドを書く
+- [x] 0-8 Playwright MCP を `.mcp.json` に追加する。CLAUDE.md の「MCP・外部ツール」の決まりに従い、開発サーバーの画面を開いてスクショが撮れることを確かめる。`.playwright-mcp/` を `.gitignore` に足す
   - 画面の大きさは 1512 × 982（MacBook の画面 3024 × 1964 のレイアウト上の大きさ）。普段の見比べは等倍、README などのスクショは2倍（設定ファイルで指定）
 
 ## 段階1：日程の計算（core）
