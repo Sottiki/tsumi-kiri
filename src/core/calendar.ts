@@ -117,10 +117,28 @@ export function formatMonthDay(date: DateString): string {
   return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
 }
 
+/**
+ * 曜日の1文字（例：'金'）。ガントの見出しの曜日の段や、カードの「12/25(金)」の曜日だけを
+ * 小さい字で出すときに使う。
+ */
+export function weekdayLabel(date: DateString): string {
+  // dayOfWeek は必ず 0〜6 を返すので、表の外を引くことはない（型の上では undefined もありうるため as で伝える）
+  return WEEKDAY_LABELS[dayOfWeek(date)] as string;
+}
+
 /** 'M/D(曜)' 形式（例：'12/25(金)'）。警告文の終了予定などに使う */
 export function formatMonthDayWeekday(date: DateString): string {
-  const label = WEEKDAY_LABELS[dayOfWeek(date)];
-  return `${formatMonthDay(date)}(${label})`;
+  return `${formatMonthDay(date)}(${weekdayLabel(date)})`;
+}
+
+/** 日付の「月」だけ（例：'2026-12-25' → 12）。ガントの見出しの月の段に使う */
+export function monthOf(date: DateString): number {
+  return new Date(toUtcMs(date)).getUTCMonth() + 1;
+}
+
+/** 日付の「日」だけ（例：'2026-12-25' → 25）。ガントの見出しの日付の段に使う */
+export function dayOfMonth(date: DateString): number {
+  return new Date(toUtcMs(date)).getUTCDate();
 }
 
 // ---------------------------------------------------------------------------

@@ -1,0 +1,65 @@
+/*
+ * ボタンと入力欄（DESIGN.md の Components）。いくつかの部品で同じ見た目を使うので、ここにまとめる。
+ * 値は tokens.css の変数だけを使う。余白（9px 14〜16px、7〜8px 10px）は DESIGN.md の Components に書かれた値。
+ */
+
+/* --- ボタンの共通部分 --- */
+.button {
+  font: inherit;
+  border: 1px solid transparent;
+  border-radius: var(--rounded-sm);
+  padding: 9px 14px;
+  cursor: pointer;
+}
+
+/* button-secondary：白地に黒文字。枠は border-strong */
+.secondary {
+  composes: button;
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  border-color: var(--color-border-strong);
+}
+
+/* button-primary：青地に白文字。主ボタン（Excel出力） */
+.primary {
+  composes: button;
+  padding: 9px 16px;
+  font-weight: 600;
+  background: var(--color-primary);
+  color: var(--color-surface);
+  border-color: var(--color-primary);
+}
+
+/* button-add-task：白地に青文字、青い枠、角丸 md */
+.addTask {
+  composes: button;
+  padding: 8px 14px;
+  font-weight: 600;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  border-radius: var(--rounded-md);
+}
+
+/* --- 入力欄（input）。枠は border-strong、余白 7px 10px --- */
+.input {
+  font-family: var(--typography-body-md-font-family);
+  font-size: var(--typography-body-md-font-size);
+  font-weight: var(--typography-body-md-font-weight);
+  color: var(--color-on-surface);
+  background: var(--color-surface);
+  padding: 7px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--rounded-sm);
+}
+
+/* 入力欄の上に置くラベル（label-md） */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2xs);
+  font-family: var(--typography-label-md-font-family);
+  font-size: var(--typography-label-md-font-size);
+  font-weight: var(--typography-label-md-font-weight);
+  color: var(--color-on-surface-sub);
+}

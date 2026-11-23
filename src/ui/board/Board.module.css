@@ -1,0 +1,624 @@
+/*
+ * タスク表とガント（DESIGN.md の Layout・Components、画面案①）
+ *
+ * 寸法は tokens.css の layout の値（表の幅 820px、行 34px／40px、1日 22px、見出し 22px × 3段）。
+ * 細かい余白（列の内側の 8px など）は画面案①の値をそのまま使う。
+ */
+
+/* ===========================================================================
+ * 箱と固定（4-9）
+ * ======================================================================== */
+
+/* 画面の残りの高さいっぱいに広げる（App の縦の flex の中で伸びる） */
+.board {
+  flex: 1;
+  min-height: 0;
+  padding: 0 var(--spacing-2xl) var(--spacing-2xl);
+}
+
+/* 縦横どちらにもスクロールする箱。sticky はこの箱に対して効く */
+.scroll {
+  height: 100%;
+  overflow: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rounded-lg);
+}
+
+/* 中身の幅は、表（820px）＋日数 × 22px。箱より狭いときは箱の幅まで広げる */
+.content {
+  width: max-content;
+  min-width: 100%;
+}
+
+/* ===========================================================================
+ * 見出し（4-5）
+ * ======================================================================== */
+
+/* 縦にスクロールしても上に残す。行（z-index 2）より前に出す */
+.headerRow {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border-strong);
+}
+
+/* タスク表の列見出し。横にスクロールしても左に残す */
+.headLeft {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  width: var(--spacing-layout-table-width);
+  height: calc(var(--spacing-layout-header-row) * 3);
+  padding: 0 9px var(--spacing-sm) var(--spacing-md);
+  background: var(--color-surface-subtle);
+  border-right: 1px solid var(--color-border-strong);
+  font-family: var(--typography-label-md-font-family);
+  font-size: var(--typography-label-md-font-size);
+  font-weight: var(--typography-label-md-font-weight);
+  color: var(--color-on-surface-sub);
+}
+
+.headRight {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+}
+
+.dayRow {
+  display: flex;
+}
+
+/* 見出しの1マス */
+.dayHead {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--spacing-layout-day-width);
+  height: var(--spacing-layout-header-row);
+}
+
+/* 1段目：月。マスからはみ出して「12月」と書く */
+.monthHead {
+  composes: dayHead;
+  justify-content: flex-start;
+  padding-left: 3px;
+  white-space: nowrap;
+  overflow: visible;
+  font-family: var(--typography-label-sm-font-family);
+  font-size: var(--typography-label-sm-font-size);
+  font-weight: var(--typography-label-sm-font-weight);
+  color: var(--color-on-surface);
+}
+
+/* 2段目：曜日 */
+.weekdayHead {
+  composes: dayHead;
+  border-right: 1px solid var(--color-grid);
+  font-family: var(--typography-label-sm-font-family);
+  font-size: var(--typography-label-sm-font-size);
+  font-weight: var(--typography-label-sm-font-weight);
+  color: var(--color-on-surface-sub);
+}
+
+/* 3段目：日付 */
+.dateHead {
+  composes: dayHead;
+  border-right: 1px solid var(--color-grid);
+  font-family: var(--typography-numeric-xs-font-family);
+  font-size: var(--typography-numeric-xs-font-size);
+  font-weight: var(--typography-numeric-xs-font-weight);
+  color: var(--color-on-surface);
+}
+
+/* 日曜・祝日の文字は赤系、土曜は青系 */
+.sunday {
+  color: var(--color-sunday);
+}
+.saturday {
+  color: var(--color-saturday);
+}
+
+/* ===========================================================================
+ * 列（見出し・工程の帯・タスクのカードで共通の幅。DESIGN.md の Layout の列幅）
+ * ======================================================================== */
+
+.colId {
+  flex: none;
+  width: 52px;
+  padding-left: 10px;
+}
+.colName {
+  flex: 1;
+  min-width: 0;
+}
+.colPriority {
+  flex: none;
+  width: 44px;
+  text-align: center;
+}
+/* 工数・残工数（56px）。数値は右寄せ */
+.colNumber {
+  flex: none;
+  width: 56px;
+  padding-right: var(--spacing-sm);
+  text-align: right;
+}
+.colNumberBold {
+  composes: colNumber;
+  font-weight: 600;
+}
+/* 進捗（52px） */
+.colProgress {
+  flex: none;
+  width: 52px;
+  padding-right: var(--spacing-sm);
+  text-align: right;
+}
+/* 開始・終了・期日（54px） */
+.colDate {
+  flex: none;
+  width: 54px;
+  text-align: center;
+}
+/* 中の札（終了日の背景など）を真ん中に置く版 */
+.colDateCenter {
+  composes: colDate;
+  display: flex;
+  justify-content: center;
+}
+.colStatus {
+  flex: none;
+  width: 72px;
+  text-align: center;
+}
+.colStatusCenter {
+  composes: colStatus;
+  display: flex;
+  justify-content: center;
+}
+
+/* ===========================================================================
+ * 行
+ * ======================================================================== */
+
+.row {
+  display: flex;
+}
+.phaseRow {
+  height: var(--spacing-layout-row-phase);
+}
+.taskRow {
+  height: var(--spacing-layout-row-task);
+}
+
+/* 左のタスク表。横にスクロールしても左に残す。ガントのマスより前に出す */
+.rowLeft {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  flex: none;
+  width: var(--spacing-layout-table-width);
+  height: 100%;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border-strong);
+}
+
+/* ===========================================================================
+ * 工程の帯（phase-band）
+ * ======================================================================== */
+
+/* 行の上に 8px、下に 3px 空ける（DESIGN.md の Layout）。左右は 8px */
+.phaseBand {
+  position: absolute;
+  top: var(--spacing-sm);
+  bottom: 3px;
+  left: var(--spacing-sm);
+  right: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  padding-left: var(--spacing-2xs);
+  background: var(--color-phase);
+  border-radius: var(--rounded-sm);
+  color: var(--color-on-phase);
+  font-family: var(--typography-numeric-sm-font-family);
+  font-size: var(--typography-label-md-font-size);
+}
+
+.phaseBand .colId {
+  font-weight: 600;
+}
+
+/* 工程名は 12px の太字、字間 0.04em（DESIGN.md の Typography） */
+.phaseName {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--typography-label-md-font-family);
+  font-size: var(--typography-body-sm-font-size);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.phaseEnd {
+  padding: 1px var(--spacing-xs);
+  border-radius: var(--rounded-xs);
+  font-weight: 600;
+}
+/* 工程の終了日がエンド日を超えたら、赤い背景に白文字 */
+.phaseEndOver {
+  background: var(--color-error);
+  color: var(--color-surface);
+}
+
+/* ===========================================================================
+ * タスクのカード（task-card）
+ * ======================================================================== */
+
+/*
+ * カードの左端は 12 + (階層 − 1) × 22 px（DESIGN.md の Layout）。
+ * 階層は BoardRow が --level に入れて渡す。上下は 3px 空ける
+ */
+.card {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: calc(var(--spacing-md) + (var(--level) - 1) * var(--spacing-layout-indent-step));
+  right: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rounded-md);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+  font-family: var(--typography-body-sm-font-family);
+  font-size: var(--typography-body-sm-font-size);
+  color: var(--color-on-surface);
+}
+
+/* 親のカード：グレーの地と枠、太字 */
+.cardParent {
+  background: var(--color-parent-card);
+  border-color: var(--color-parent-border);
+}
+.cardParent .cardName {
+  font-weight: 700;
+}
+
+/* エンド日を超えたカード：薄い赤の地と枠、名前は赤字 */
+.cardOver {
+  background: var(--color-error-card);
+  border-color: var(--color-error-border);
+}
+.cardOver .cardName {
+  color: var(--color-error);
+}
+
+/* 数値の列は Inter で桁をそろえる */
+.cardId,
+.cardEffort,
+.cardProgress,
+.cardRemaining,
+.card .colDate,
+.cardDue,
+.priority {
+  font-family: var(--typography-numeric-sm-font-family);
+  font-size: var(--typography-numeric-sm-font-size);
+}
+
+.cardId {
+  composes: colId;
+  color: var(--color-on-surface-sub);
+}
+
+.cardName {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.nameText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 開閉マークのボタン。見た目はアイコンだけにする */
+.toggle {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-on-surface-sub);
+  cursor: pointer;
+}
+.chevron {
+  display: block;
+}
+/* たたんでいるときは右向きにする */
+.chevronCollapsed {
+  transform: rotate(-90deg);
+}
+
+.fire {
+  flex: none;
+  color: var(--color-fire);
+}
+.memo {
+  flex: none;
+  color: var(--color-on-surface-faint);
+}
+
+/* 子の数の札（child-count-badge） */
+.childCount {
+  flex: none;
+  padding: 0 var(--spacing-xs);
+  border-radius: var(--rounded-full);
+  background: var(--color-badge);
+  color: var(--color-on-surface-sub);
+  font-family: var(--typography-label-sm-font-family);
+  font-size: var(--typography-label-sm-font-size);
+  font-weight: var(--typography-label-sm-font-weight);
+}
+
+/* 優先度（priority-*）：太字の記号 */
+.priority {
+  font-weight: 700;
+}
+.priorityHigh {
+  color: var(--color-error);
+}
+.priorityMid {
+  color: var(--color-warning);
+}
+.priorityLow {
+  color: var(--color-on-surface-sub);
+}
+
+/* 工数（56px）・進捗（52px）。入力欄を右に寄せる */
+.cardEffort {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  width: 56px;
+  padding-right: var(--spacing-xs);
+}
+.cardProgress {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 1px;
+  width: 52px;
+  padding-right: var(--spacing-2xs);
+}
+
+/* 表の中の数値の入力欄（input-table）。右寄せ、工数は幅46px、進捗は幅36px */
+.tableInput {
+  padding: 3px 5px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--rounded-xs);
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  font-family: var(--typography-numeric-sm-font-family);
+  font-size: var(--typography-numeric-sm-font-size);
+  font-weight: var(--typography-numeric-sm-font-weight);
+  text-align: right;
+}
+.effortInput {
+  composes: tableInput;
+  width: 46px;
+}
+.progressInput {
+  composes: tableInput;
+  width: 36px;
+  padding: 3px var(--spacing-2xs);
+}
+.percent {
+  font-size: var(--typography-label-sm-font-size);
+  color: var(--color-on-surface-sub);
+}
+
+/* 親の工数・進捗（自動の値）。工数は太字 */
+.parentNumber {
+  padding-right: 2px;
+  font-weight: 700;
+}
+.parentProgress {
+  padding-right: var(--spacing-2xs);
+}
+
+.cardRemaining {
+  composes: colNumber;
+  color: var(--color-on-surface-sub);
+}
+
+.endDate {
+  padding: 1px 5px;
+  border-radius: var(--rounded-xs);
+  font-weight: 600;
+}
+.endDateOver {
+  color: var(--color-error);
+}
+
+.cardDue {
+  composes: colDate;
+  color: var(--color-on-surface-sub);
+}
+
+/* --- 状態の札（chip-*） --- */
+.chip {
+  padding: 2px var(--spacing-sm);
+  border-radius: var(--rounded-full);
+  font-family: var(--typography-label-md-font-family);
+  font-size: var(--typography-label-md-font-size);
+  font-weight: var(--typography-label-md-font-weight);
+}
+.chipDone {
+  background: var(--color-done-container);
+  color: var(--color-on-done);
+}
+.chipInProgress {
+  background: var(--color-primary-container);
+  color: var(--color-primary);
+}
+/* 未着手だけは border-strong の内側の線を付ける（DESIGN.md の Components） */
+.chipNotStarted {
+  background: var(--color-surface);
+  color: var(--color-on-surface-sub);
+  box-shadow: inset 0 0 0 1px var(--color-border-strong);
+}
+.chipOver {
+  background: var(--color-error-container);
+  color: var(--color-error);
+}
+
+/* --- カードの下端の進捗ライン（3px。末端は青、親はグレー、超過は赤） --- */
+.progressLine {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: var(--spacing-layout-progress-line);
+  background: var(--color-primary);
+}
+.progressLineParent {
+  background: var(--color-parent-done);
+}
+.progressLineOver {
+  background: var(--color-error);
+}
+
+/* ===========================================================================
+ * ツリー線（tree-line）。太さ 1.5px は画面案①の値
+ * ======================================================================== */
+
+/*
+ * 縦線の位置：--line-level の階層のカードの左端から 10px。
+ * カードの左端 = 12 + (階層 − 1) × 22 なので、同じ式に 10px を足す
+ */
+.line {
+  position: absolute;
+  left: calc(
+    var(--spacing-md) + (var(--line-level) - 1) * var(--spacing-layout-indent-step) + 10px
+  );
+  background: var(--color-tree-line);
+}
+
+/* 子・孫の行の縦線。行の上から下まで */
+.lineVertical {
+  composes: line;
+  top: 0;
+  width: 1.5px;
+  height: 100%;
+}
+/* 兄弟の最後なら、行の真ん中で止める */
+.lineVerticalHalf {
+  height: 50%;
+}
+
+/* 縦線から自分のカードまでの横線。長さは字下げ1段（22px）から 10px を引いた分 */
+.lineHorizontal {
+  composes: line;
+  top: calc(50% - 0.75px);
+  width: calc(var(--spacing-layout-indent-step) - 10px);
+  height: 1.5px;
+}
+
+/* 子を持つ親のカードの下から、子へ向かう短い線（カードの下の 3px のすき間） */
+.lineStub {
+  composes: line;
+  bottom: 0;
+  width: 1.5px;
+  height: 3px;
+}
+
+/* ===========================================================================
+ * ガントのマス（4-6・4-7）
+ * ======================================================================== */
+
+.cells {
+  display: flex;
+  flex: none;
+  height: 100%;
+}
+
+.cell {
+  position: relative;
+  flex: none;
+  width: var(--spacing-layout-day-width);
+  height: 100%;
+  border-right: 1px solid var(--color-grid);
+}
+
+/* 列の背景：土日祝はグレー、今日は黄色（見出しとマスで共通） */
+.dayOff {
+  background: var(--color-day-off);
+}
+.today {
+  background: var(--color-today);
+}
+/* 今日の日付の見出しは、列より濃い黄色 */
+.todayHead {
+  background: var(--color-today-head);
+}
+/* 工程の行は、稼働日のマスにも薄い背景を敷く */
+.phaseCell {
+  background: var(--color-phase-row);
+}
+
+/* もう一方のモードの完了予定（点線）。エンド日の線と同じ日なら、エンド日の線を優先する */
+.otherModeLine {
+  border-right: 1px dashed var(--color-other-mode-line);
+}
+/* エンド日の列の右に、2px の赤い実線（DESIGN.md の Colors） */
+.endLine {
+  border-right: 2px solid var(--color-end-line);
+}
+
+/* --- バー。1日1マスで、マスの幅いっぱいに描く。高さを決めて上下の真ん中に置く --- */
+.bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  margin: auto 0;
+}
+.barLeaf {
+  height: var(--spacing-layout-bar-leaf);
+}
+.barThin {
+  height: var(--spacing-layout-bar-parent);
+}
+.barLeafDone {
+  background: var(--color-primary);
+}
+.barLeafRest {
+  background: var(--color-primary-soft);
+}
+.barParentDone {
+  background: var(--color-parent-done);
+}
+.barParentRest {
+  background: var(--color-parent-rest);
+}
+.barPhaseRest {
+  background: var(--color-phase-rest);
+}
+.barOverDone {
+  background: var(--color-error);
+}
+.barOverRest {
+  background: var(--color-error-soft);
+}

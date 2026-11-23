@@ -1,0 +1,70 @@
+/* 上部のカード。最小 220px の列で折り返す（DESIGN.md の Layout） */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg) var(--spacing-2xl) 0;
+}
+
+/* stat-card：白いカード。余白は画面案の 14px 16px */
+.card {
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rounded-lg);
+  padding: 14px var(--spacing-lg);
+}
+
+/* stat-card-on-time：エンド日に間に合う（緑） */
+.cardOnTime {
+  composes: card;
+  background: var(--color-success-container);
+  border-color: var(--color-success-border);
+  color: var(--color-success);
+}
+
+/* stat-card-over：エンド日を超える（赤） */
+.cardOver {
+  composes: card;
+  background: var(--color-error-panel);
+  border-color: var(--color-error-border);
+  color: var(--color-error);
+}
+
+/* カードの名前（body-sm、補足の色） */
+.label {
+  font-family: var(--typography-body-sm-font-family);
+  font-size: var(--typography-body-sm-font-size);
+  color: var(--color-on-surface-sub);
+}
+
+/* 大きな数値（stat-value）。色はカード（緑・赤）の色を受け継ぐ */
+.value {
+  margin-top: var(--spacing-2xs);
+  font-family: var(--typography-stat-value-font-family);
+  font-size: var(--typography-stat-value-font-size);
+  font-weight: var(--typography-stat-value-font-weight);
+}
+
+/* 数値の後ろの単位・曜日（body-md） */
+.unit {
+  margin-left: var(--spacing-2xs);
+  font-family: var(--typography-body-md-font-family);
+  font-size: var(--typography-body-md-font-size);
+  font-weight: var(--typography-body-md-font-weight);
+}
+
+/* 数値の下の補足（body-sm、補足の色） */
+.note {
+  margin-top: 2px;
+  font-family: var(--typography-body-sm-font-family);
+  font-size: var(--typography-body-sm-font-size);
+  color: var(--color-on-surface-sub);
+}
+
+/* 間に合う／超過の判定。カードの色（緑・赤）の太字 */
+.judgement {
+  composes: note;
+  font-weight: 600;
+  color: inherit;
+}
