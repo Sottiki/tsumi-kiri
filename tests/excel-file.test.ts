@@ -2,7 +2,7 @@
  * Excel出力のファイル名（src/excel/fileName.ts）と、ファイルの中身（src/excel/exportFile.ts）のテスト
  * （tasks.md 9-5、SPEC 3.3）。
  *
- * ダウンロードそのもの（ボタンを押すとファイルが保存される）は、画面のテスト（e2e/dist-file.spec.ts）で確かめる。
+ * ダウンロードそのもの（ボタンを押すとファイルが保存される）は、画面のテスト（e2e/excel-export.spec.ts）で確かめる。
  */
 
 import ExcelJS from 'exceljs';

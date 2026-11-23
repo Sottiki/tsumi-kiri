@@ -6,15 +6,24 @@
  * ここの test は、すべてのテストで「ページで JavaScript のエラーが起きていないか」を自動で確かめる。
  * テストごとに書き忘れることがなく、どの操作の途中でエラーが出ても見つけられる。
  *
+ * ■ 開く画面
+ * ビルドした dist/index.html を file:// で開く。公開するのはこのファイルなので、テストもこれを確かめる。
+ * PC に置いて開く使い方と同じ条件で、GitHub Pages（http）よりダウンロードなどの条件が厳しい。
+ *
  * ■ 時計
  * 時計を画面案と同じ「2026-11-19(木) 東京」から始めて開く。
  * サンプルPJTの開始日は「開いた日を含む週の月曜」なので 2026-11-16 になり、
  * 画面案・docs/test-cases.md 1章と同じ日程・カードの値になる。
  */
 
+import { existsSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { expect, test as base, type Page } from '@playwright/test';
 
 export { expect };
+
+/** ビルドした画面のファイル。npm run build で作られる */
+const DIST_HTML = fileURLToPath(new URL('../dist/index.html', import.meta.url));
 
 /** 画面案の「今」。2026-11-19(木) 10:00 東京 */
 const MOCKUP_NOW = new Date('2026-11-19T10:00:00+09:00');
@@ -39,24 +48,28 @@ export const test = base.extend<{ failOnPageError: void }>({
 });
 
 /**
- * 時計を画面案の日に合わせてから開く。毎回まっさらなブラウザなので、保存データはなくサンプルPJTで始まる。
+ * 時計を画面案の日に合わせてから、ビルドした dist/index.html を開く。
+ * 毎回まっさらなブラウザなので、保存データはなくサンプルPJTで始まる。
  *
  * clock.install は、ページの時計（Date・setTimeout など）を Playwright が動かせる時計に差し替える。
  * 時間はふつうに流れるが、clock.fastForward で先へ進められる。
  * ハイライトが消えるまでの 1.5 秒などを、実際に待たずに確かめるために使う。
- *
- * @param url 開く URL。省略すると開発サーバーの画面（/）。ビルドした dist/index.html は file:// の URL を渡す
  */
-export async function openOnMockupDay(page: Page, url = '/') {
+export async function openOnMockupDay(page: Page) {
+  // ビルドしていないと、ファイルがなくて開けない。何をすればよいかが分かるように、先に確かめる
+  expect(
+    existsSync(DIST_HTML),
+    '先に npm run build を行う（npm run test:e2e なら自動で行う）',
+  ).toBe(true);
   await page.clock.install({ time: MOCKUP_NOW });
-  await page.goto(url);
+  await page.goto(pathToFileURL(DIST_HTML).href);
   // 書体（Google Fonts）が後から読み込まれると、文字の高さが変わって部品の位置がずれる。
   // 位置を比べるテストがあるので、書体の読み込みが終わるまで待つ
   await page.evaluate(() => document.fonts.ready);
 }
 
 /**
- * 画面が正しく開けたこと。開発サーバーと file:// の両方で使う（tasks.md 段階0 の完了条件）
+ * 画面が正しく開けたこと（tasks.md 段階0 の完了条件）
  * - タイトルと、React が描いた画面がある
  * - tokens.css が読み込まれ、背景が DESIGN.md の background になっている
  * - 画面の大きさが 1512 × 982（等倍）になっている

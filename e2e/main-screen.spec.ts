@@ -1,15 +1,12 @@
 /**
  * メイン画面の表示（tasks.md 段階4）の画面のテスト。
  *
- * 開発サーバーの画面を、時計を画面案と同じ「2026-11-19(木) 東京」に合わせて開く（e2e/helpers.ts）。
- * ビルドした dist/index.html（file://）は、e2e/dist-file.spec.ts で確かめる。
+ * ビルドした dist/index.html を、時計を画面案と同じ「2026-11-19(木) 東京」に合わせて開く（e2e/helpers.ts）。
  */
 
 import { expect, expectAppOpens, openOnMockupDay, row, test } from './helpers';
 
-test('開発サーバーの画面が開け、サンプルPJTの工程・タスク・カードが表示される', async ({
-  page,
-}) => {
+test('画面が開け、サンプルPJTの工程・タスク・カードが表示される', async ({ page }) => {
   await openOnMockupDay(page);
   await expectAppOpens(page);
 

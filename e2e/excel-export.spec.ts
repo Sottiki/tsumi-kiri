@@ -1,32 +1,23 @@
 /**
- * ビルドした dist/index.html（file://）の画面のテスト。
+ * Excel出力のボタン（tasks.md 段階9B）の画面のテスト。
  *
- * - file:// で開けること（tasks.md 段階0 の完了条件。architecture.md 9章「file:// でも動く」）
- * - 「Excel出力」を押すと、`工数ガント_<PJT名>_<出力日>.xlsx` がダウンロードされること（tasks.md 段階9B）
- *
- * Excel出力は、開発サーバーでも file:// でも同じ処理なので、より条件の厳しい file:// だけで確かめる
- * （file:// では、ダウンロードの URL の扱いなどが開発サーバーと違う）。
- * 開発サーバーで開けることは、e2e/main-screen.spec.ts で確かめている。
+ * 「Excel出力」を押すと、`工数ガント_<PJT名>_<出力日>.xlsx` がダウンロードされることを確かめる。
+ * 画面はビルドした dist/index.html を file:// で開くので（e2e/helpers.ts）、
+ * file:// でもダウンロードできることも、ここで確かめられる（architecture.md 9章「file:// でも動く」）。
  *
  * 時計を画面案と同じ「2026-11-19(木) 東京」に合わせるので、出力日は 2026-11-19 になる。
  * ダウンロードしたファイルは ExcelJS で読み戻し、Excel のファイルとして開けることも確かめる。
  * ファイルの中身の細かい確かめは Vitest（tests/excel.test.ts・tests/excel-file.test.ts）で行っている。
  */
 
-import { existsSync } from 'node:fs';
-import { fileURLToPath, pathToFileURL } from 'node:url';
 import ExcelJS from 'exceljs';
-import { expect, expectAppOpens, openOnMockupDay, test } from './helpers';
-
-const distHtml = fileURLToPath(new URL('../dist/index.html', import.meta.url));
+import { expect, openOnMockupDay, test } from './helpers';
 
 /** サンプルPJT（社内ポータル刷新）を、2026-11-19 の東京で開いたときのファイル名 */
 const EXPECTED_FILE_NAME = '工数ガント_社内ポータル刷新_2026-11-19.xlsx';
 
-test('file://：ビルドした画面が開け、Excel出力で xlsx がダウンロードされる', async ({ page }) => {
-  expect(existsSync(distHtml), '先に npm run build を行う').toBe(true);
-  await openOnMockupDay(page, pathToFileURL(distHtml).href);
-  await expectAppOpens(page);
+test('Excel出力のボタンを押すと、xlsx がダウンロードされる', async ({ page }) => {
+  await openOnMockupDay(page);
 
   // 失敗したときの alert が出たら、テストを失敗させる（alert はテストを止めてしまうので、閉じてから記録する）
   const dialogs: string[] = [];

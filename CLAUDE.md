@@ -90,7 +90,7 @@ Node.js は 26系（`.nvmrc`、Volta で固定）。
 | `npm run dev`        | 開発サーバー（[http://localhost:5173](http://localhost:5173) ）                                      |
 | `npm test`           | テスト（Vitest。`tests/**/*.test.ts`）                                                             |
 | `npm run test:watch` | テストを変更のたびに流す                                                                                 |
-| `npm run test:e2e`   | 画面のテスト（Playwright Test。`e2e/**/*.spec.ts`）。先にビルドする。初回は `npx playwright install chromium` が必要 |
+| `npm run test:e2e`   | 画面のテスト（Playwright Test。`e2e/**/*.spec.ts`）。先にビルドし、`dist/index.html` を `file://` で開く。初回は `npx playwright install chromium` が必要 |
 | `npm run lint`       | ESLint と Prettier の確認                                                                        |
 | `npm run format`     | Prettier で整形する                                                                               |
 | `npm run build`      | 型の確認と、1つの HTML（`dist/index.html`）へのビルド                                                       |
