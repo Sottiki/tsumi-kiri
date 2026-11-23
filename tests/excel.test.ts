@@ -28,16 +28,38 @@ const OVERTIME = 'ガント（残業10h）';
 /** タスク表の列の数（A〜J）。日付の列は K 列（11）から */
 const FIRST_DAY_COLUMN = 11;
 
+/** xlsx のファイル（バイト列）を読み戻す */
+async function reload(buffer: ExcelJS.Buffer): Promise<ExcelJS.Workbook> {
+  const reloaded = new ExcelJS.Workbook();
+  await reloaded.xlsx.load(buffer);
+  return reloaded;
+}
+
 /** ブックを作り、xlsx に書き出して読み戻す */
 async function buildAndReload(
   pjt: Project,
   daysOff: DayOff[] = [],
   today: DateString = TODAY,
 ): Promise<ExcelJS.Workbook> {
-  const buffer = await buildWorkbook(pjt, daysOff, today).xlsx.writeBuffer();
-  const reloaded = new ExcelJS.Workbook();
-  await reloaded.xlsx.load(buffer);
-  return reloaded;
+  return reload(await buildWorkbook(pjt, daysOff, today).xlsx.writeBuffer());
+}
+
+/**
+ * 画面案のデータ（mockupProject）のブックを、書き出して読み戻す。
+ *
+ * 多くのテストが同じ画面案のデータを使うので、書き出したファイル（バイト列）を1回だけ作って使い回す。
+ * ブックを作って書き出すのは、読み戻すより時間がかかるため（1回およそ 10ms）。
+ *
+ * 読み戻すのはテストごとに行い、それぞれ別の Workbook を返す。
+ * ExcelJS は、getCell で空のセルを読んだだけでもセルを作るので、
+ * 読み戻したブックまで使い回すと、前のテストが読んだセルで列の数（columnCount）などが変わりうる。
+ * テストどうしが影響し合わないよう、ブックは使い回さない。
+ */
+let mockupBuffer: Promise<ExcelJS.Buffer> | null = null;
+async function mockupWorkbook(): Promise<ExcelJS.Workbook> {
+  // 最初に呼ばれたときだけ書き出す。Promise を覚えておくので、同時に呼ばれても書き出しは1回
+  mockupBuffer ??= buildWorkbook(mockupProject(), [], TODAY).xlsx.writeBuffer();
+  return reload(await mockupBuffer);
 }
 
 /** シートを名前で取り出す。なければテストを失敗させる */
@@ -80,12 +102,12 @@ function fontColorOf(cell: ExcelJS.Cell): string | undefined {
 
 describe('ブックの形', () => {
   it('シートは「ガント（通常8h）」「ガント（残業10h）」の2枚で、この順に並ぶ', async () => {
-    const workbook = await buildAndReload(mockupProject());
+    const workbook = await mockupWorkbook();
     expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual([NORMAL, OVERTIME]);
   });
 
   it('6行目・K列でウィンドウ枠を固定する', async () => {
-    const workbook = await buildAndReload(mockupProject());
+    const workbook = await mockupWorkbook();
     for (const name of [NORMAL, OVERTIME]) {
       const view = sheetOf(workbook, name).views[0];
       expect(view).toMatchObject({ state: 'frozen', xSplit: 10, ySplit: 5, topLeftCell: 'K6' });
@@ -93,7 +115,7 @@ describe('ブックの形', () => {
   });
 
   it('列の幅は画面案②の px を換算した値（ID 48px、名前 182px、日付 14px）', async () => {
-    const sheet = sheetOf(await buildAndReload(mockupProject()), NORMAL);
+    const sheet = sheetOf(await mockupWorkbook(), NORMAL);
     expect(sheet.getColumn(1).width).toBe(pxToColumnWidth(48));
     expect(sheet.getColumn(2).width).toBe(pxToColumnWidth(182));
     expect(sheet.getColumn(10).width).toBe(pxToColumnWidth(64));
@@ -107,7 +129,7 @@ describe('ブックの形', () => {
   });
 
   it('書体は游ゴシック', async () => {
-    const sheet = sheetOf(await buildAndReload(mockupProject()), NORMAL);
+    const sheet = sheetOf(await mockupWorkbook(), NORMAL);
     expect(sheet.getCell('A1').font?.name).toBe('游ゴシック');
     expect(sheet.getCell('B6').font?.name).toBe('游ゴシック');
   });
@@ -115,7 +137,7 @@ describe('ブックの形', () => {
 
 describe('1〜2行目：タイトルと条件', () => {
   it('通常のシート：タイトルと、開始日・エンド日・完了予定・総工数・稼働時間', async () => {
-    const sheet = sheetOf(await buildAndReload(mockupProject()), NORMAL);
+    const sheet = sheetOf(await mockupWorkbook(), NORMAL);
     expect(sheet.getCell('A1').value).toBe('テスト用PJT　工数ガント（通常 8h）');
     expect(sheet.getCell('A1').font?.bold).toBe(true);
     // 完了予定（通常）は 1/4、総工数は 33.5 人日（TC-01・TC-04）
@@ -131,7 +153,7 @@ describe('1〜2行目：タイトルと条件', () => {
   });
 
   it('残業のシート：完了予定と稼働時間が残業 10h の値になる', async () => {
-    const sheet = sheetOf(await buildAndReload(mockupProject()), OVERTIME);
+    const sheet = sheetOf(await mockupWorkbook(), OVERTIME);
     expect(sheet.getCell('A1').value).toBe('テスト用PJT　工数ガント（残業 10h）');
     // 完了予定（残業）は 12/23（TC-01）
     expect(sheet.getCell('A2').value).toBe(
@@ -163,7 +185,7 @@ describe('1〜2行目：タイトルと条件', () => {
 describe('3〜5行目：見出し', () => {
   it('3行目：最初の日と、毎月1日の列に月を書く', async () => {
     const pjt = mockupProject();
-    const sheet = sheetOf(await buildAndReload(pjt), NORMAL);
+    const sheet = sheetOf(await mockupWorkbook(), NORMAL);
     expect(sheet.getCell(3, columnOf(pjt, '2026-11-16')).value).toBe('11月');
     expect(sheet.getCell(3, columnOf(pjt, '2026-11-17')).value).toBeNull();
     expect(sheet.getCell(3, columnOf(pjt, '2026-12-01')).value).toBe('12月');
@@ -172,7 +194,7 @@ describe('3〜5行目：見出し', () => {
 
   it('4行目：タスク表の列見出しと、日付。祝日は「休」', async () => {
     const pjt = mockupProject();
-    const sheet = sheetOf(await buildAndReload(pjt), NORMAL);
+    const sheet = sheetOf(await mockupWorkbook(), NORMAL);
     const headers = Array.from({ length: 10 }, (_, i) => sheet.getCell(4, i + 1).value);
     expect(headers).toEqual([
       'ID',
@@ -196,7 +218,7 @@ describe('3〜5行目：見出し', () => {
 
   it('5行目：曜日。日曜・祝日は sunday、土曜は saturday の色', async () => {
     const pjt = mockupProject();
-    const sheet = sheetOf(await buildAndReload(pjt), NORMAL);
+    const sheet = sheetOf(await mockupWorkbook(), NORMAL);
     const monday = sheet.getCell(5, columnOf(pjt, '2026-11-16'));
     const saturday = sheet.getCell(5, columnOf(pjt, '2026-11-21'));
     const sunday = sheet.getCell(5, columnOf(pjt, '2026-11-22'));
@@ -226,7 +248,7 @@ describe('3〜5行目：見出し', () => {
 
 describe('6行目から：タスクの行', () => {
   it('末端のタスク：ID、字下げした名前、優先度、工数・進捗・残工数、日程、状態', async () => {
-    const sheet = sheetOf(await buildAndReload(mockupProject()), NORMAL);
+    const sheet = sheetOf(await mockupWorkbook(), NORMAL);
     // 1-2 要件定義書作成：工数 3.0・進捗 60%・残工数 1.2、11/18 → 11/20（TC-01）
     const r = rowNumberOf(sheet, '1-2');
     const values = Array.from({ length: 10 }, (_, i) => sheet.getCell(r, i + 1).value);
@@ -252,12 +274,12 @@ describe('6行目から：タスクの行', () => {
   });
 
   it('孫の階層は、全角スペース2つで字下げする', async () => {
-    const sheet = sheetOf(await buildAndReload(mockupProject()), NORMAL);
+    const sheet = sheetOf(await mockupWorkbook(), NORMAL);
     expect(sheet.getCell(rowNumberOf(sheet, '2-1-1'), 2).value).toBe('　　画面設計');
   });
 
   it('工程の行：字下げなし、太字、phase-row の背景。優先度は出さない', async () => {
-    const sheet = sheetOf(await buildAndReload(mockupProject()), NORMAL);
+    const sheet = sheetOf(await mockupWorkbook(), NORMAL);
     const r = rowNumberOf(sheet, '2');
     expect(sheet.getCell(r, 2).value).toBe('設計');
     expect(sheet.getCell(r, 3).value).toBeNull();
@@ -270,7 +292,7 @@ describe('6行目から：タスクの行', () => {
   });
 
   it('親タスクの行：太字、excel-parent-row の背景。優先度は出さない', async () => {
-    const sheet = sheetOf(await buildAndReload(mockupProject()), NORMAL);
+    const sheet = sheetOf(await mockupWorkbook(), NORMAL);
     const r = rowNumberOf(sheet, '2-1');
     expect(sheet.getCell(r, 2).value).toBe('　基本設計');
     expect(sheet.getCell(r, 3).value).toBeNull();
@@ -312,7 +334,7 @@ describe('6行目から：タスクの行', () => {
 
 describe('超過と期日超過', () => {
   it('エンド日を超えた末端の行：名前・終了日・状態を赤字にし、期日超過も状態に書く', async () => {
-    const sheet = sheetOf(await buildAndReload(mockupProject()), NORMAL);
+    const sheet = sheetOf(await mockupWorkbook(), NORMAL);
     // 5-1 本番リリース：通常では 1/4 に終わり、エンド日 12/25 と期日 12/25 の両方を超える（TC-01）
     const r = rowNumberOf(sheet, '5-1');
     expect(sheet.getCell(r, 8).value).toBe('2027-01-04');
@@ -326,7 +348,7 @@ describe('超過と期日超過', () => {
 
   it('工程・親が超過しても、文字は赤くしない（バーだけ赤）', async () => {
     const pjt = mockupProject();
-    const sheet = sheetOf(await buildAndReload(pjt), NORMAL);
+    const sheet = sheetOf(await mockupWorkbook(), NORMAL);
     // 5 リリース：通常では 1/4 に終わるので超過
     const r = rowNumberOf(sheet, '5');
     expect(sheet.getCell(r, 10).value).toBe('超過');
@@ -338,7 +360,7 @@ describe('超過と期日超過', () => {
 
   it('残業のシートでは、同じタスクがエンド日に間に合うので赤くならない', async () => {
     const pjt = mockupProject();
-    const sheet = sheetOf(await buildAndReload(pjt), OVERTIME);
+    const sheet = sheetOf(await mockupWorkbook(), OVERTIME);
     // 5-1 本番リリース：残業では 12/23 に終わる（TC-01）
     const r = rowNumberOf(sheet, '5-1');
     expect(sheet.getCell(r, 8).value).toBe('2026-12-23');
@@ -351,7 +373,7 @@ describe('超過と期日超過', () => {
 describe('ガントのセル', () => {
   it('バーは1日1セル。完了分と残りを、その日の真ん中が境目より前かで塗り分ける', async () => {
     const pjt = mockupProject();
-    const sheet = sheetOf(await buildAndReload(pjt), NORMAL);
+    const sheet = sheetOf(await mockupWorkbook(), NORMAL);
     // 1-2 要件定義書作成：位置 2 – 5、進捗 60% なので境目は 3.8（test-cases.md 0.2）
     // 11/18（真ん中 2.5）・11/19（3.5）は完了分、11/20（4.5）は残り
     const r = rowNumberOf(sheet, '1-2');
@@ -365,7 +387,7 @@ describe('ガントのセル', () => {
 
   it('親のバーは parent-done・parent-rest、工程のバーは parent-done・phase-rest', async () => {
     const pjt = mockupProject();
-    const sheet = sheetOf(await buildAndReload(pjt), NORMAL);
+    const sheet = sheetOf(await mockupWorkbook(), NORMAL);
     // 2-1 基本設計と 2 設計は、どれも進捗 0% なので残りの色だけ
     const parent = rowNumberOf(sheet, '2-1');
     const phase = rowNumberOf(sheet, '2');
@@ -378,7 +400,7 @@ describe('ガントのセル', () => {
 
   it('どの行も、塗ったセルの数が barCells のマスの数と同じ（通常・残業とも）', async () => {
     const pjt = mockupProject();
-    const workbook = await buildAndReload(pjt);
+    const workbook = await mockupWorkbook();
     const barColors = new Set(
       (
         [
@@ -414,7 +436,7 @@ describe('ガントのセル', () => {
 
   it('土日祝の列は、バーのない行でもグレーにする', async () => {
     const pjt = mockupProject();
-    const sheet = sheetOf(await buildAndReload(pjt), NORMAL);
+    const sheet = sheetOf(await mockupWorkbook(), NORMAL);
     const r = rowNumberOf(sheet, '1-1');
     expect(fillOf(sheet.getCell(r, columnOf(pjt, '2026-11-21')))).toBe(argb('excel-day-off'));
     expect(fillOf(sheet.getCell(r, columnOf(pjt, '2026-11-23')))).toBe(argb('excel-day-off'));
@@ -422,7 +444,7 @@ describe('ガントのセル', () => {
 
   it('エンド日の列の右に赤い線を引く（ほかの列は細い罫線）', async () => {
     const pjt = mockupProject();
-    const sheet = sheetOf(await buildAndReload(pjt), NORMAL);
+    const sheet = sheetOf(await mockupWorkbook(), NORMAL);
     for (const r of [4, 5, rowNumberOf(sheet, '1-1')]) {
       const endCell = sheet.getCell(r, columnOf(pjt, '2026-12-25'));
       expect(endCell.border?.right).toMatchObject({
@@ -447,7 +469,7 @@ describe('ガントのセル', () => {
 
   it('日付の列は、開始日から「エンド日と完了予定（通常）の遅い方」の1週間後まで（2枚とも同じ）', async () => {
     const pjt = mockupProject();
-    const workbook = await buildAndReload(pjt);
+    const workbook = await mockupWorkbook();
     // 通常の完了予定 1/4 の1週間後 = 1/11 まで（TC-06）
     const lastColumn = columnOf(pjt, '2027-01-11');
     for (const name of [NORMAL, OVERTIME]) {

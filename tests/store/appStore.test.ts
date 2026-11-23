@@ -130,12 +130,15 @@ describe('3-3 元に戻す・やり直す', () => {
     expect(taskAt(store, 0, 0).effortTenths).toBe(50);
   });
 
-  it('同じ編集の回（editSession）の入力は、1回で戻る', () => {
+  it('同じ編集の回（editSession）の入力は、間が空いても1回で戻る', () => {
     const store = makeStore();
     const { actions } = store.getState();
     const id = taskAt(store, 0, 0).id;
     for (const value of [3, 35, 350]) {
       actions.updateTask(id, { effortTenths: value }, 'session-1');
+      // ゆっくり打っても1件にまとまる（時間ではまとめない。architecture.md 6章、決定事項61）。
+      // 偽の時計なので、2秒進めても実際には待たない
+      vi.advanceTimersByTime(2000);
     }
     actions.undo();
     expect(taskAt(store, 0, 0).effortTenths).toBe(20);

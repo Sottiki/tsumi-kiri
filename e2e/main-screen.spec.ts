@@ -1,16 +1,14 @@
 /**
  * メイン画面の表示（tasks.md 段階4）の画面のテスト。
  *
- * 時計を画面案と同じ「2026-11-19(木) 東京」に止めて開く（e2e/helpers.ts）。
+ * ビルドした dist/index.html を、時計を画面案と同じ「2026-11-19(木) 東京」に合わせて開く（e2e/helpers.ts）。
  */
 
-import { expect, test } from '@playwright/test';
-import { openOnMockupDay, row } from './helpers';
+import { expect, expectAppOpens, openOnMockupDay, row, test } from './helpers';
 
-test.use({ timezoneId: 'Asia/Tokyo' });
-
-test('サンプルPJTの工程・タスク・カードが表示される', async ({ page }) => {
+test('画面が開け、サンプルPJTの工程・タスク・カードが表示される', async ({ page }) => {
   await openOnMockupDay(page);
+  await expectAppOpens(page);
 
   // --- ヘッダ ---
   await expect(page.getByLabel('PJT名')).toHaveValue('社内ポータル刷新');
@@ -119,10 +117,7 @@ test('通常／残業を切り替えると、表の日程が変わる', async ({
   const normalButton = page.getByRole('button', { name: '通常 8h' });
   const overtimeButton = page.getByRole('button', { name: '残業 10h' });
   await expect(normalButton).toHaveAttribute('aria-pressed', 'true');
-
-  // 通常：5-1 は 1/4 に終わり、エンド日を超える
-  await expect(row(page, '5-1')).toContainText('1/4');
-  await expect(row(page, '5-1')).toContainText('超過');
+  // 通常のときの 5-1（1/4 に終わり、エンド日を超える）は、最初のテストで確かめている
 
   // 残業：5-1 は 12/23 に終わり、エンド日に間に合う（test-cases.md TC-01）
   await overtimeButton.click();

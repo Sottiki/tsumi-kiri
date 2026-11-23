@@ -296,7 +296,14 @@ App
 ## 10. テスト・ビルド・公開
 
 - **テスト**：core と excel を Vitest で確かめる。日程計算は docs/test-cases.md の例をそのままテストにする
-- **画面のテスト**：Playwright Test で、開発サーバーの画面と、ビルドした `dist/index.html`（`file://`）を開いて確かめる。画面の大きさは 1512 × 982（等倍）。表示されるもの・操作した結果など、コマンドで確かめられることはここに書く
+- **画面のテスト**：Playwright Test で、ビルドした `dist/index.html` を `file://` で開いて確かめる。画面の大きさは 1512 × 982（等倍）。表示されるもの・操作した結果など、コマンドで確かめられることはここに書く
+  - 公開するのはビルドしたファイルなので、開発サーバーではなく、それを開く。PC に置いて開く使い方と同じ条件で、GitHub Pages（http）より条件が厳しい（ダウンロードなど）。開発サーバーは起動しない
+  - テストは `e2e/helpers.ts` の `test` を使う。どのテストでも、ページで JavaScript のエラーが起きたら失敗にする
+- **テストの書き方（速さのため）**
+  - 実際の時間を待たない。Vitest は `vi.useFakeTimers` と `vi.advanceTimersByTime`、Playwright Test は `page.clock.fastForward` で時計を進める。`waitForTimeout` は使わない
+  - 計算・データの操作の細かい場合分けは Vitest で確かめ、画面のテストは「画面につながっているか」を代表の例で確かめる。同じことを両方で細かく確かめない
+  - 画面のテストは、ファイルの中のテストも同時に流す（`fullyParallel`）。テストどうしで状態を共有しない
+- **CI**：lint とユニットのテスト（`check`）と、ビルドと画面のテスト（`e2e`）を、別の job で同時に流す
 - **人が見る確認**：画面案との見比べ（色・寸法）は、テストにせず人が見る。web-design-guidelines の skill でもレビューする
 - **ビルド**：`npm run build` で `dist/index.html` が1つできる。これを PC に置けばそのまま使える
 - **公開**：GitHub Actions で、`main` に入ったらテストとビルドを行い、GitHub Pages に公開する。PR ではテストとビルドだけを行う
