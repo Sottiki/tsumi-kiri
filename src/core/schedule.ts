@@ -485,6 +485,8 @@ export function barCells(row: ScheduleRow, hoursPerDay: HoursPerDay): BarCell[] 
     // 両辺に 200 を掛けると、
     //   (segmentStart + segmentEnd) × 100 < start × 200 + length × progressPct × 2
     // 末端の進捗率は整数なので、両辺とも整数になり、誤差なく比べられる。
+    // 親・工程の行では進捗率が小数の平均なので、右辺は整数にならない。
+    // その場合でも誤差は非常に小さく、ちょうど境目に重なるときにだけ結果が変わりうる。
     const middleTimes200 = (segmentStart + segmentEnd) * 100;
     const boundaryTimes200 = start * 200 + length * row.progressPct * 2;
     cells.push({ workdayIndex: day, done: middleTimes200 < boundaryTimes200 });

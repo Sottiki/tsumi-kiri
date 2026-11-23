@@ -1,7 +1,8 @@
 /**
- * core/tree.ts のテスト（tasks.md 段階2：2-1〜2-7、TC-35・TC-42）
+ * core/tree.ts のテスト（tasks.md 段階2：2-1〜2-7、TC-35・TC-39・TC-42）
  */
 import { describe, expect, it } from 'vitest';
+import { schedule } from '../src/core/schedule';
 import {
   addChildTask,
   addTaskToPhase,
@@ -182,6 +183,49 @@ describe('2-4 タスクの削除', () => {
   });
 });
 
+describe('子がなくなった親（TC-39）', () => {
+  /** 親P（子 A：工数 2.0、進捗 50%）を「設計」工程に持つPJT。P 自身には子を足す前の値 3.0・20% が残っている */
+  function parentWithOneChild(): Project {
+    let p = createProject('2026-11-16', () => 'p1');
+    p = addTaskToPhase(p, 'design', task('P', { effortTenths: 30, progressPct: 20 }));
+    p = addChildTask(p, 'P', task('A'));
+    // 子を足した後に、子の値を変える（親に残っている 3.0・20% とは違う値にする）
+    return updateTask(p, 'A', { effortTenths: 20, progressPct: 50 });
+  }
+
+  /** P が工数 0・進捗 0 の末端に戻っていて、日程も工数 0 のタスクと同じ（TC-16）になっていることを確かめる */
+  function expectEmptyLeaf(p: Project) {
+    const parent = findTask(p, 'P')!.task;
+    expect(parent.children).toEqual([]);
+    expect(parent.effortTenths).toBe(0);
+    expect(parent.progressPct).toBe(0);
+
+    const row = schedule(p, [], 8).find((r) => r.key === 'P')!;
+    expect(row.leaf).toBe(true);
+    expect(row.start).toBe(row.end); // 長さ 0
+    expect(row.startDate).toBe('2026-11-16');
+    expect(row.endDate).toBe('2026-11-16');
+  }
+
+  it('(a) 最後の子を削除すると、親は工数 0・進捗 0 の末端に戻る', () => {
+    expectEmptyLeaf(deleteTask(parentWithOneChild(), 'A'));
+  });
+
+  it('(b) 最後の子を別の場所へ移しても、同じように末端に戻る', () => {
+    const p = moveTask(parentWithOneChild(), 'A', { phaseId: 'impl', parentId: null });
+    expectEmptyLeaf(p);
+    // 移したタスクの値はそのまま
+    expect(findTask(p, 'A')!.task.effortTenths).toBe(20);
+  });
+
+  it('子がまだ残っていれば、親の値は変えない', () => {
+    let p = parentWithOneChild();
+    p = addChildTask(p, 'P', task('B'));
+    const after = deleteTask(p, 'A');
+    expect(findTask(after, 'P')!.task.effortTenths).toBe(30);
+  });
+});
+
 describe('2-5 同じ階層の中での並べ替え（TC-42）', () => {
   it('基本設計と詳細設計を入れ替えると、子も一緒に動く', () => {
     const p = reorderTask(designProject(), '詳細設計', '基本設計');
@@ -191,6 +235,13 @@ describe('2-5 同じ階層の中での並べ替え（TC-42）', () => {
       '詳細設計',
       { 基本設計: ['画面設計', 'DB設計'] },
     ]);
+
+    // 日程の計算を通して、ID が並び順から振り直されることも確かめる（TC-42）
+    const labels = Object.fromEntries(schedule(p, [], 8).map((row) => [row.key, row.label]));
+    expect(labels['詳細設計']).toBe('2-1');
+    expect(labels['基本設計']).toBe('2-2');
+    expect(labels['画面設計']).toBe('2-2-1');
+    expect(labels['DB設計']).toBe('2-2-2');
   });
 
   it('下へ動かすと、落とした先の後ろに入る', () => {

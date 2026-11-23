@@ -315,15 +315,34 @@ export function countDescendants(project: Project, taskId: string): number {
  * タスクを削除する。子・孫もまとめて消える（SPEC 3.2）。
  * 元に戻す（Ctrl+Z）は、段階3のストアで変更前の版に戻すことで行う。
  *
+ * ■ 子がなくなった親（SPEC 3.2、決定事項42、TC-39）
  * 親の最後の子を消すと、その親は末端に戻る。
- * そのときの工数・進捗率は、親に残しておいた値（子を足す前の値）になる。
+ * そのときの工数・進捗率は 0 にする。
+ * 親には「子を足す前に入れていた値」が残っているが、子を編集した後では意味のない古い値なので使わない。
+ * 消えた子の値を引き継ぐのも、子がもういないのに不自然なので、しない。
+ *
+ * 別の親へ移す（moveTask）ときも、この関数で今の場所から取り除くので、同じ扱いになる。
  */
 export function deleteTask(project: Project, taskId: string): Project {
   const loc = findTask(project, taskId);
   if (!loc) return project;
-  return updateSiblings(project, loc.phaseId, loc.parentId, (siblings) =>
+  const removed = updateSiblings(project, loc.phaseId, loc.parentId, (siblings) =>
     siblings.filter((t) => t.id !== taskId),
   );
+
+  // 工程の直下のタスクを消したときは、親タスクがないので、ここで終わり
+  if (loc.parentId === null) return removed;
+
+  // 親の子がこれでなくなったなら、親を「工数 0・進捗率 0 の末端」にする
+  const parent = findTask(removed, loc.parentId);
+  if (parent && parent.task.children.length === 0) {
+    return updateTaskById(removed, loc.parentId, (task) => ({
+      ...task,
+      effortTenths: 0,
+      progressPct: 0,
+    }));
+  }
+  return removed;
 }
 
 // ---------------------------------------------------------------------------
@@ -455,7 +474,8 @@ export type TaskPatch = Partial<
   Pick<Task, 'name' | 'effortTenths' | 'progressPct' | 'priority' | 'due' | 'memo'>
 >;
 
-const PRIORITIES: readonly Priority[] = ['high', 'mid', 'low'];
+/** 優先度の一覧。値が正しいかを確かめるのに使う（storage.ts の読み込みでも使う） */
+export const PRIORITIES: readonly Priority[] = ['high', 'mid', 'low'];
 
 /**
  * タスクの項目を変える（名前・工数・進捗率・優先度・期日・メモ）。

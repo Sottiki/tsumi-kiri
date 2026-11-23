@@ -7,9 +7,12 @@ import {
   WorkCalendar,
   WorkdayNumbering,
   addDays,
+  daysBetween,
   formatMonthDay,
   formatMonthDayWeekday,
   isJapaneseHoliday,
+  isValidDateString,
+  mondayOfWeek,
 } from '../src/core/calendar';
 
 describe('日付の文字列の計算', () => {
@@ -109,5 +112,28 @@ describe('稼働日の番号（test-cases.md 0.1）', () => {
     expect(numbering.dateOf(0)).toBe('2026-12-24');
     expect(numbering.dateOf(1)).toBe('2026-12-25');
     expect(numbering.dateOf(2)).toBe('2026-12-29');
+  });
+});
+
+describe('日付の小さな計算（sample.ts・storage.ts でも使う）', () => {
+  it('daysBetween：暦の上の日数の差', () => {
+    expect(daysBetween('2026-11-16', '2026-11-23')).toBe(7);
+    expect(daysBetween('2026-11-23', '2026-11-16')).toBe(-7);
+    expect(daysBetween('2026-12-31', '2027-01-01')).toBe(1);
+  });
+
+  it('mondayOfWeek：その日を含む週の月曜', () => {
+    expect(mondayOfWeek('2026-11-16')).toBe('2026-11-16'); // 月曜はその日
+    expect(mondayOfWeek('2026-11-19')).toBe('2026-11-16'); // 木曜
+    expect(mondayOfWeek('2026-11-22')).toBe('2026-11-16'); // 日曜は前の週の続き
+  });
+
+  it('isValidDateString：形と、実在する日付か', () => {
+    expect(isValidDateString('2026-11-23')).toBe(true);
+    expect(isValidDateString('2028-02-29')).toBe(true); // うるう年
+    expect(isValidDateString('2026-02-29')).toBe(false);
+    expect(isValidDateString('2026-13-01')).toBe(false);
+    expect(isValidDateString('2026-1-5')).toBe(false);
+    expect(isValidDateString(20261123)).toBe(false);
   });
 });

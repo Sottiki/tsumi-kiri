@@ -15,6 +15,7 @@
  * React にも DOM にも依存しない（architecture.md 2章）。
  */
 
+import { addDays, daysBetween, mondayOfWeek } from './calendar';
 import { CURRENT_VERSION } from './storage';
 import { createTask, PHASES, type IdGenerator, newId } from './tree';
 import type { AppData, DateString, PhaseId, Priority, Project, Task } from './types';
@@ -26,39 +27,6 @@ const BASE_END = '2026-12-25';
 
 /** サンプルのPJTの名前（SPEC 7章の例と同じ） */
 export const SAMPLE_PROJECT_NAME = '社内ポータル刷新';
-
-// ---------------------------------------------------------------------------
-// 日付の小さな計算
-// ---------------------------------------------------------------------------
-//
-// 稼働日の暦は core/calendar.ts（段階1B）で作るが、ここで要るのは
-// 「何日ずらす」「何曜日か」だけなので、このファイルの中で小さく書く。
-// タイムゾーンで日付がずれないよう、すべて UTC で計算する（architecture.md 4章）。
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-/** 'YYYY-MM-DD' を、1970-01-01 から数えた日数にする */
-function toDayNumber(date: DateString): number {
-  const [y, m, d] = date.split('-').map(Number) as [number, number, number];
-  return Date.UTC(y, m - 1, d) / DAY_MS;
-}
-
-/** 1970-01-01 から数えた日数を、'YYYY-MM-DD' に戻す */
-function fromDayNumber(days: number): DateString {
-  // toISOString は '2026-11-16T00:00:00.000Z' の形なので、先頭の10文字が日付
-  return new Date(days * DAY_MS).toISOString().slice(0, 10);
-}
-
-/**
- * その日を含む週の月曜を返す。月曜始まりの週として数える（日曜は前の週の続き）。
- * getUTCDay は 日 0、月 1、… 土 6。月曜から何日たったかは (曜日 + 6) % 7 で出る。
- * 例：木曜(4) → 3日前が月曜、日曜(0) → 6日前が月曜
- */
-function mondayOfWeek(date: DateString): DateString {
-  const days = toDayNumber(date);
-  const weekday = new Date(days * DAY_MS).getUTCDay();
-  return fromDayNumber(days - ((weekday + 6) % 7));
-}
 
 // ---------------------------------------------------------------------------
 // サンプルのデータ（画面案のとおり）
@@ -139,8 +107,9 @@ const SAMPLE_TASKS: Record<PhaseId, SampleTask[]> = {
 export function createSampleProject(today: DateString, makeId: IdGenerator = newId): Project {
   const start = mondayOfWeek(today);
   // 画面案の開始日から何日ずらすか。どちらも月曜なので、7の倍数になる
-  const shift = toDayNumber(start) - toDayNumber(BASE_START);
-  const shiftDate = (date: DateString) => fromDayNumber(toDayNumber(date) + shift);
+  // 日付の計算は calendar.ts の関数を使う（タイムゾーンでずれないよう、UTC で計算してある）
+  const shift = daysBetween(BASE_START, start);
+  const shiftDate = (date: DateString) => addDays(date, shift);
 
   const build = (sample: SampleTask): Task =>
     createTask(makeId, {

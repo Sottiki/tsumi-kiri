@@ -63,6 +63,39 @@ export function dayOfWeek(date: DateString): number {
   return new Date(toUtcMs(date)).getUTCDay();
 }
 
+/**
+ * from から to まで、暦の上で何日あるか（to − from）。to が前ならマイナスになる。
+ * 例：daysBetween('2026-11-16', '2026-11-23') は 7。
+ * UTC には夏時間がないので、ミリ秒の差は必ず1日の長さで割り切れる。
+ */
+export function daysBetween(from: DateString, to: DateString): number {
+  return (toUtcMs(to) - toUtcMs(from)) / MS_PER_DAY;
+}
+
+/**
+ * その日を含む週の月曜。月曜始まりの週として数える（日曜は前の週の続き）。
+ * 曜日の番号は 日 0、月 1 … 土 6 なので、月曜から何日たったかは (曜日 + 6) % 7 で出る。
+ * 例：木曜(4) → 3日前が月曜、日曜(0) → 6日前が月曜、月曜(1) → その日
+ */
+export function mondayOfWeek(date: DateString): DateString {
+  const daysSinceMonday = (dayOfWeek(date) + 6) % 7;
+  return addDays(date, -daysSinceMonday);
+}
+
+/**
+ * 'YYYY-MM-DD' の形で、実在する日付か。保存データの検証などで、外から来た値を確かめるのに使う。
+ *
+ * 正規表現だけだと '2026-02-30' のような日付も通ってしまう。
+ * そこで、いったん UTC のミリ秒にしてから文字列に戻し、元と同じになるかで確かめる
+ * （2026-02-30 は 2026-03-02 に繰り上がるので、元と違う → 実在しない）。
+ */
+export function isValidDateString(value: unknown): value is DateString {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  return fromUtcMs(toUtcMs(value)) === value;
+}
+
 /** 土曜か日曜か */
 export function isWeekend(date: DateString): boolean {
   const dow = dayOfWeek(date);

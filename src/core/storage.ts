@@ -12,7 +12,8 @@
  * React にも DOM にも依存しない（architecture.md 2章）。
  */
 
-import { MAX_LEVEL, PHASES } from './tree';
+import { isValidDateString } from './calendar';
+import { MAX_LEVEL, PHASES, PRIORITIES } from './tree';
 import type {
   AppData,
   DateString,
@@ -134,19 +135,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/**
- * 'YYYY-MM-DD' の形で、実在する日付か。
- * 正規表現だけだと 2026-02-30 のような日付も通るので、
- * いったん Date にして、年・月・日が変わらずに戻るかでも確かめる。
- * タイムゾーンでずれないよう、UTC で作る（architecture.md 4章）。
- */
-function isDateString(value: unknown): value is DateString {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const [y, m, d] = value.split('-').map(Number) as [number, number, number];
-  const date = new Date(Date.UTC(y, m - 1, d));
-  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
-}
-
 function readString(obj: Record<string, unknown>, key: string, path: string): string {
   const value = obj[key];
   if (typeof value !== 'string') fail(path, `${key} が文字列ではありません`);
@@ -164,7 +152,7 @@ function readId(obj: Record<string, unknown>, path: string, seen: Set<string>): 
 
 function readDate(obj: Record<string, unknown>, key: string, path: string): DateString {
   const value = obj[key];
-  if (!isDateString(value)) fail(path, `${key} が正しい日付（YYYY-MM-DD）ではありません`);
+  if (!isValidDateString(value)) fail(path, `${key} が正しい日付（YYYY-MM-DD）ではありません`);
   return value;
 }
 
@@ -176,8 +164,6 @@ function readDateOrNull(
   if (obj[key] === null) return null;
   return readDate(obj, key, path);
 }
-
-const PRIORITIES: readonly Priority[] = ['high', 'mid', 'low'];
 
 /**
  * 保存する形のタスクを確かめて、メモリの形にする。子も同じように確かめる。
