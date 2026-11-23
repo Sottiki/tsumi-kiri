@@ -1,5 +1,5 @@
 /**
- * ui/parse.ts のテスト（tasks.md 5-1・5-2：入力欄の文字の読み取り。SPEC 3.1、決定事項54・57・58）
+ * ui/parse.ts のテスト（tasks.md 5-1・5-2：入力欄の文字の読み取り。SPEC 3.1、決定事項56・59・60）
  */
 import { describe, expect, it } from 'vitest';
 import {

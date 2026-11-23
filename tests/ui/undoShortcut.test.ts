@@ -1,5 +1,5 @@
 /**
- * ui/undoShortcut.ts のテスト（tasks.md 5-5：元に戻す・やり直すのキー。SPEC 3.1、決定事項56）
+ * ui/undoShortcut.ts のテスト（tasks.md 5-5：元に戻す・やり直すのキー。SPEC 3.1、決定事項58）
  */
 import { describe, expect, it } from 'vitest';
 import { undoShortcutOf, type ShortcutKeys } from '../../src/ui/undoShortcut';
