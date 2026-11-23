@@ -1,0 +1,105 @@
+/* 操作の列。値は画面案①のとおり（上 16px、左右 24px、下 10px） */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-md) var(--spacing-xl);
+  padding: var(--spacing-lg) var(--spacing-2xl) 10px;
+}
+
+/* --- モード切り替え（mode-toggle）：2つのボタンを border-strong の枠で囲む --- */
+.modeToggle {
+  display: flex;
+  overflow: hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--rounded-md);
+}
+
+.mode {
+  font: inherit;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: 0;
+  cursor: pointer;
+  background: var(--color-surface);
+  color: var(--color-on-surface-sub);
+}
+
+/* mode-toggle-active：選んでいる方 */
+.modeActive {
+  composes: mode;
+  background: var(--color-on-surface);
+  color: var(--color-surface);
+  font-weight: 600;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* --- 凡例 --- */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--typography-label-md-font-size);
+  color: var(--color-on-surface-sub);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* バーの見本（横長） */
+.swatchBar {
+  display: inline-block;
+  width: 16px;
+  height: 8px;
+}
+.swatchDone {
+  composes: swatchBar;
+  background: var(--color-primary);
+}
+.swatchRest {
+  composes: swatchBar;
+  background: var(--color-primary-soft);
+}
+.swatchOver {
+  composes: swatchBar;
+  background: var(--color-error);
+}
+
+/* 列の色の見本（四角） */
+.swatchBox {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+}
+.swatchDayOff {
+  composes: swatchBox;
+  background: var(--color-day-off);
+  border: 1px solid var(--color-border-strong);
+}
+.swatchToday {
+  composes: swatchBox;
+  background: var(--color-today);
+  border: 1px solid var(--color-today-border);
+}
+
+/* エンド日の線の見本（2px の赤い縦線） */
+.swatchEndLine {
+  display: inline-block;
+  width: 0;
+  height: 12px;
+  border-right: 2px solid var(--color-end-line);
+}
+
+.fire {
+  color: var(--color-fire);
+}

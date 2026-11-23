@@ -1,0 +1,6 @@
+/* 画面の高さいっぱいに、部品を縦に並べる。Board（flex: 1）が残りの高さを使う */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}

@@ -7,12 +7,15 @@ import {
   WorkCalendar,
   WorkdayNumbering,
   addDays,
+  dayOfMonth,
   daysBetween,
   formatMonthDay,
   formatMonthDayWeekday,
   isJapaneseHoliday,
   isValidDateString,
+  monthOf,
   mondayOfWeek,
+  weekdayLabel,
 } from '../src/core/calendar';
 
 describe('日付の文字列の計算', () => {
@@ -27,6 +30,15 @@ describe('日付の文字列の計算', () => {
     expect(formatMonthDay('2026-12-25')).toBe('12/25');
     expect(formatMonthDayWeekday('2027-01-04')).toBe('1/4(月)');
     expect(formatMonthDayWeekday('2026-12-29')).toBe('12/29(火)');
+  });
+
+  it('ガントの見出しとカードに使う、月・日・曜日を取り出せる', () => {
+    expect(monthOf('2026-12-25')).toBe(12);
+    expect(monthOf('2027-01-04')).toBe(1);
+    expect(dayOfMonth('2026-12-25')).toBe(25);
+    expect(dayOfMonth('2027-01-04')).toBe(4);
+    expect(weekdayLabel('2026-12-25')).toBe('金');
+    expect(weekdayLabel('2026-11-22')).toBe('日');
   });
 });
 

@@ -1,0 +1,32 @@
+/* ヘッダ。値は画面案①の header と同じ */
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--spacing-lg);
+  padding: 14px var(--spacing-2xl);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* アプリ名（app-title）。入力欄の下端とそろうよう、下に 6px 空ける */
+.title {
+  margin: 0;
+  padding-bottom: var(--spacing-xs);
+  font-family: var(--typography-app-title-font-family);
+  font-size: var(--typography-app-title-font-size);
+  font-weight: var(--typography-app-title-font-weight);
+}
+
+/* PJT名の欄（project-name）。幅は画面案の 220px */
+.nameInput {
+  composes: input from './controls.module.css';
+  width: 220px;
+  font-family: var(--typography-project-name-font-family);
+  font-size: var(--typography-project-name-font-size);
+  font-weight: var(--typography-project-name-font-weight);
+}
+
+.spacer {
+  flex: 1;
+}
