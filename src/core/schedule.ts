@@ -21,16 +21,26 @@ import {
   addDays,
   formatMonthDay,
   formatMonthDayWeekday,
-  type DayKind,
 } from './calendar';
-import type { DateString, DayOff, Phase, Project, ScheduleRow, Status, Task } from './types';
+import type {
+  BarCell,
+  DateString,
+  DayOff,
+  FinishForecast,
+  GanttDay,
+  HoursPerDay,
+  Phase,
+  Project,
+  ScheduleRow,
+  Status,
+  SummaryCards,
+  Task,
+  Warning,
+} from './types';
 
 // ---------------------------------------------------------------------------
 // 1日の稼働時間
 // ---------------------------------------------------------------------------
-
-/** 1日の稼働時間。通常 8 時間、残業 10 時間 */
-export type HoursPerDay = 8 | 10;
 
 /** 1日の長さ（0.1時間単位）。8時間 → 80、10時間 → 100 */
 export function dayLength(hoursPerDay: HoursPerDay): number {
@@ -344,35 +354,6 @@ function isOverDue(
 // 1-8：カード用の集計
 // ---------------------------------------------------------------------------
 
-/** 完了予定のカード1枚ぶん（通常 8h ／ 残業 10h） */
-export interface FinishForecast {
-  /** 完了予定日（最後のタスクの終了日）。タスクがなければ null */
-  finishDate: DateString | null;
-  /**
-   * エンド日を何営業日超えるか。間に合うなら 0（「エンド日に間に合う」）。
-   * エンド日が空欄か、タスクがなければ null（「エンド日未設定」など。SPEC 3.1）
-   */
-  overrunWorkdays: number | null;
-}
-
-/** 上部のカード4枚に出す値（SPEC 3.1） */
-export interface SummaryCards {
-  /** 総工数（0.1人日単位） */
-  totalEffortTenths: number;
-  /** 残工数（0.1人日単位）。末端の残工数の合計 */
-  remainingTenths: number;
-  /** PJT全体の進捗率。タスクのある工程の進捗率の単純平均（小数のまま。TC-04・TC-33） */
-  progressPct: number;
-  /** エンド日。空欄なら null */
-  endDate: DateString | null;
-  /** 今日の翌日からエンド日までの営業日。今日がエンド日と同じか後なら 0。エンド日が空欄なら null（TC-30） */
-  workdaysUntilEnd: number | null;
-  normal: FinishForecast;
-  overtime: FinishForecast;
-  /** 残業なら通常より何営業日早く終わるか。タスクがなければ null */
-  shortenedWorkdays: number | null;
-}
-
 /**
  * PJT全体の集計（総工数カード、完了予定）。
  * 工程の行を「PJT全体の子」とみなして、親と同じ決まりで集計する。
@@ -429,15 +410,6 @@ export function summarizeCards(
 // 1-9：ガントの表示期間とバーの塗り分け
 // ---------------------------------------------------------------------------
 
-/** ガントの1列（1日）。土日・祝日も含めて、暦の上のすべての日を並べる */
-export interface GanttDay {
-  date: DateString;
-  /** 稼働日・土日・休（祝日と休業日）のどれか。見出しの色と「休」の表示に使う */
-  kind: DayKind;
-  /** 開始日から数えた稼働日の番号。稼働日でない日は null */
-  workdayIndex: number | null;
-}
-
 /**
  * ガントに出す日を、開始日から順に並べる（SPEC 3.1）。
  *
@@ -475,14 +447,6 @@ export function listGanttDays(
     });
   }
   return days;
-}
-
-/** バーの1マス（1稼働日） */
-export interface BarCell {
-  /** 開始日から数えた稼働日の番号。GanttDay.workdayIndex と突き合わせて、どの列に塗るかを決める */
-  workdayIndex: number;
-  /** 完了分（濃い色）なら true、残り（薄い色）なら false */
-  done: boolean;
 }
 
 /**
@@ -531,16 +495,6 @@ export function barCells(row: ScheduleRow, hoursPerDay: HoursPerDay): BarCell[] 
 // ---------------------------------------------------------------------------
 // 1-10：詳細パネルの警告
 // ---------------------------------------------------------------------------
-
-/** 警告1件。画面では太字の1行目（title）と、通常の2行目（detail）に分けて出す（DESIGN.md 警告の枠） */
-export interface Warning {
-  /** どちらの締め切りを超えたか */
-  kind: 'due' | 'end';
-  /** 例：「終了予定 1/4(月) は期日 12/25 を 5 営業日超えています」 */
-  title: string;
-  /** 例：「残業 10h なら 12/23(水) に終わり、期日に間に合います。」 */
-  detail: string;
-}
 
 /**
  * 詳細パネルの警告を作る（SPEC 3.2、TC-05・TC-28）。

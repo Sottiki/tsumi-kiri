@@ -136,6 +136,8 @@ interface ScheduleRow {
 }
 ```
 
+- カード用の集計（`SummaryCards`）、ガントの日（`GanttDay`）、バーのマス（`BarCell`）、警告（`Warning`）など、ほかの計算結果の型も `types.ts` に置く。画面と Excel の両方から使うため
+
 ## 5. 計算（core/schedule.ts）
 
 ルールは SPEC 5章のとおり。実装の要点：

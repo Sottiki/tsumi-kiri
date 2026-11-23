@@ -11,9 +11,8 @@ import {
   listGanttDays,
   schedule,
   summarizeCards,
-  type HoursPerDay,
 } from '../src/core/schedule';
-import type { Project, ScheduleRow } from '../src/core/types';
+import type { HoursPerDay, Project, ScheduleRow } from '../src/core/types';
 import { mockupProject, project, rowOf, scheduleByLabel, task } from './helpers';
 
 /**

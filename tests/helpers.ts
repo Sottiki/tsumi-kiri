@@ -6,9 +6,10 @@
  * 本番の変換（core/storage.ts の fromSaved）は段階2で作るので、テストではここで直接変換する。
  */
 
-import { schedule, type HoursPerDay } from '../src/core/schedule';
+import { schedule } from '../src/core/schedule';
 import type {
   DateString,
+  HoursPerDay,
   DayOff,
   Phase,
   PhaseId,
