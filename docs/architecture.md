@@ -33,10 +33,16 @@ src/
     calendar.ts      稼働日の暦（土日・祝日・休業日）と、日付の計算・書式
     schedule.ts      日程の計算と集計（カード・ガントの日・バーのマス・警告も）
     tree.ts          タスクの追加・削除・移動・並べ替え。5本の工程（PHASES）と階層の上限（MAX_LEVEL）もここに置く
+    appData.ts       PJTの追加・削除・並べ替え・切り替え、PJTの項目、休業日の追加と削除
     sample.ts        サンプルPJT（開いた日に合わせて日付をずらす）
     storage.ts       保存形式の検証とバージョン移行
   excel/           Excel出力（ExcelJS でブックを組み立てる）
   store/           Zustand のストア、元に戻す履歴、localStorage への保存
+    appStore.ts      ストア本体（createAppStore）。テストではここから作る
+    history.ts       元に戻す・やり直すの履歴
+    persistence.ts   保存先（toSaved・fromSaved、まとめ書き、壊れたデータの退避）
+    derived.ts       表示中のPJTの計算結果と、ハイライトする行
+    index.ts         画面で使う1つだけのストアと useAppStore。閉じる直前の保存もここで仕掛ける
   ui/              画面のコンポーネント
     tokens.css       DESIGN.md のトークンを CSS 変数にしたもの
   main.tsx
@@ -46,7 +52,8 @@ e2e/               画面のテスト（Playwright Test）
 ```
 
 - 依存の向きは `ui → store → core`、`excel → core` の一方向にする。core は React も DOM も使わない
-- core の中の依存：`schedule → calendar`、`storage → tree`、`sample → tree・storage`。どれも `types` を使う。輪にならないようにする
+- core の中の依存：`schedule → calendar`、`storage → calendar・tree`、`sample → calendar・tree・storage`、`appData → calendar`。どれも `types` を使う。輪にならないようにする
+- 日付の計算（日数の差、週の月曜、日付の形の検証など）は `calendar.ts` にまとめ、ほかのファイルで同じものを書かない
 - 計算は core に閉じ込め、Vitest で画面なしに確かめられるようにする
 
 ## 3. データの流れ
@@ -182,7 +189,9 @@ JavaScript の数値は2進数の小数なので、`0.1 + 0.2` は `0.3000000000
 - 履歴に入れない操作（SPEC 3.1）：PJTタブの切り替え（`activeId`）と、通常／残業の切り替え（`Project.overtime`）。どちらも AppData の中にあるが、表示の切り替えなので戻さない
   - 元に戻す・やり直すで版を入れ替えるときも、今の `activeId` と各PJTの `overtime` はそのまま残す
   - 戻した結果、表示中のPJTがなくなる（追加を戻したときなど）なら、先頭のPJTを表示する
-- ファイルの分け方：`store/history.ts`（履歴。React に依存しない関数）、`store/persistence.ts`（保存）、`store/appStore.ts`（ストア本体）、`store/derived.ts`（計算結果とハイライト）
+- ファイルの分け方：`store/history.ts`（履歴。React に依存しない関数）、`store/persistence.ts`（保存）、`store/appStore.ts`（ストア本体）、`store/derived.ts`（計算結果とハイライト）、`store/index.ts`（画面で使うストア）
+- データは必ずストアの `actions` を通して変える。`actions` は core の関数（tree.ts・appData.ts）で新しいデータを作り、履歴に残す変更（`change`）か残さない変更（`switchView`）として入れる。どちらも最後に、計算結果・ハイライト・表示の状態をまとめて更新する
+- ハイライトするのは、日程（開始日・終了日）が変わったタスクの行だけ。工程の行と、新しく足したタスクは対象にしない。1.5秒後にストアが消し、0.8秒かけて戻す動き（DESIGN.md の Motion）は画面で付ける
 - 入力欄にカーソルがあるときの Ctrl+Z は、ブラウザ標準の「入力欄の元に戻す」に任せる
 
 ## 7. 保存
