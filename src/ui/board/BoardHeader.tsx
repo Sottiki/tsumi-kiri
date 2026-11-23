@@ -10,6 +10,7 @@
  */
 
 import { dayOfMonth, dayOfWeek, monthOf, weekdayLabel } from '../../core/calendar';
+import type { Ref } from 'react';
 import type { DateString, GanttDay } from '../../core/types';
 import { cx } from '../cx';
 import styles from './Board.module.css';
@@ -18,6 +19,8 @@ interface BoardHeaderProps {
   days: readonly GanttDay[];
   today: DateString;
   endDate: DateString | null;
+  /** 見出しの高さを Board が測るため（開いた行までスクロールするとき、見出しに隠れる分を引く） */
+  ref?: Ref<HTMLDivElement>;
 }
 
 /** 曜日の文字の色。日曜と「休」の日は赤系、土曜は青系、ほかは普通の色 */
@@ -27,7 +30,8 @@ function weekdayColorClass(day: GanttDay): string | null {
   return null;
 }
 
-export function BoardHeader({ days, today, endDate }: BoardHeaderProps) {
+// React 19 では、ref を普通の props として受け取れる（forwardRef は要らない）
+export function BoardHeader({ days, today, endDate, ref }: BoardHeaderProps) {
   /** 曜日・日付の段に共通の、列の色と線のクラス */
   const columnClass = (day: GanttDay) =>
     cx(
@@ -37,7 +41,7 @@ export function BoardHeader({ days, today, endDate }: BoardHeaderProps) {
     );
 
   return (
-    <div className={styles.headerRow}>
+    <div className={styles.headerRow} ref={ref}>
       <div className={styles.headLeft}>
         <div className={styles.colId}>ID</div>
         <div className={styles.colName}>工程 / タスク</div>

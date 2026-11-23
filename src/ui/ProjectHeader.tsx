@@ -3,7 +3,15 @@
  *
  * 左にアプリ名と、PJT名・開始日・エンド日の欄。右に 休業日・有給／バックアップ／Excel出力 のボタン。
  *
- * - 欄は読み取り専用（readOnly）にしておき、段階5（5-2）で入力できるようにする
+ * ■ 欄（5-2）
+ * 打つたびに、正しい値ならストアの updateProject で反映する（日程とカードがすぐに変わる）。
+ * 正しくない値は反映せず、欄を離れたら今の値に戻す（DraftInput の動き）。
+ * - PJT名：空（空白だけ）は反映しない（決定事項59）
+ * - 開始日：2026〜2050年の日付だけ反映する。空にはできない（日程を積む起点なので）
+ * - エンド日：2026〜2050年の日付か、空欄（エンド日未設定、SPEC 3.1）を反映する（決定事項60）
+ * 続けて打った入力は、ストアの履歴で1件にまとまる（1秒以内の同じ欄。store/history.ts）。
+ *
+ * ■ ボタン
  * - 「Excel出力」は表示中のPJTを .xlsx でダウンロードする（段階9B）
  * - 「休業日・有給」「バックアップ」はまだ何もしない。中身は段階8で作る
  */
@@ -15,6 +23,8 @@ import { localToday, selectActiveProject } from '../store/appStore';
 import { appStore, useAppStore } from '../store';
 import controls from './controls.module.css';
 import { downloadBlob } from './download';
+import { DraftInput } from './DraftInput';
+import { MAX_INPUT_YEAR, MIN_INPUT_YEAR, parseDateInput, parseProjectName } from './parse';
 import styles from './ProjectHeader.module.css';
 
 /**
@@ -24,8 +34,30 @@ import styles from './ProjectHeader.module.css';
 const EXPORT_ERROR_MESSAGE =
   'Excel のファイルを作れませんでした。もう一度「Excel出力」を押してください。';
 
+/** 日付の欄のカレンダーで選べる範囲（決定事項60）。打って入れた値は parseDateInput で確かめる */
+const DATE_MIN = `${MIN_INPUT_YEAR}-01-01`;
+const DATE_MAX = `${MAX_INPUT_YEAR}-12-31`;
+
 export function ProjectHeader() {
   const project = useAppStore(selectActiveProject);
+  const updateProject = useAppStore((state) => state.actions.updateProject);
+
+  const handleName = (text: string) => {
+    const name = parseProjectName(text);
+    if (name !== null && name !== project.name) updateProject({ name });
+  };
+
+  const handleStart = (text: string) => {
+    const start = parseDateInput(text);
+    if (start !== null && start !== project.start) updateProject({ start });
+  };
+
+  const handleEnd = (text: string) => {
+    // 欄を空にしたら、エンド日を空欄（null）にする。それ以外は、正しい日付のときだけ反映する
+    const end = text === '' ? null : parseDateInput(text);
+    if (text !== '' && end === null) return;
+    if (end !== project.end) updateProject({ end });
+  };
 
   /**
    * Excel を作っている間は true。作り終わる前にもう一度押されても、2つ目を作らないための目印。
@@ -59,16 +91,30 @@ export function ProjectHeader() {
 
       <label className={controls.field}>
         PJT名
-        <input className={styles.nameInput} value={project.name} readOnly />
+        <DraftInput className={styles.nameInput} value={project.name} onDraft={handleName} />
       </label>
       <label className={controls.field}>
         開始日
-        <input className={controls.input} type="date" value={project.start} readOnly />
+        <DraftInput
+          className={controls.input}
+          type="date"
+          min={DATE_MIN}
+          max={DATE_MAX}
+          value={project.start}
+          onDraft={handleStart}
+        />
       </label>
       <label className={controls.field}>
         エンド日
         {/* エンド日が空欄（null）なら、空の欄にする。input の value に null は渡せないので '' にする */}
-        <input className={controls.input} type="date" value={project.end ?? ''} readOnly />
+        <DraftInput
+          className={controls.input}
+          type="date"
+          min={DATE_MIN}
+          max={DATE_MAX}
+          value={project.end ?? ''}
+          onDraft={handleEnd}
+        />
       </label>
 
       {/* ここから右はボタン。空きを広げて右へ寄せる */}

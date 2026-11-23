@@ -8,6 +8,11 @@
  *   エンド日を超えたら薄い赤のカードと赤字。期日を超えたら炎アイコン。メモがあればメモのアイコン
  * 右（ガント）：1日1マス。バーは完了分（濃い色）と残り（薄い色）で塗り分ける
  *
+ * 段階5で足したもの：
+ * - 末端の工数・進捗率の入力欄（5-1）。正しい値を打つたびに、ストアの updateTask で反映する
+ * - 日程が変わった終了日のハイライト（5-3）。ストアの highlightKeys に入っている行だけ光らせる
+ * - 工程の帯の「＋」（5-4）。その工程の末尾にタスクを足す
+ *
  * React.memo で包み、行に渡す値が変わらなければ描き直さない（architecture.md 8章）。
  */
 
@@ -15,17 +20,21 @@ import { memo, type CSSProperties } from 'react';
 import { formatMonthDay } from '../../core/calendar';
 import { barCells } from '../../core/schedule';
 import { PHASES } from '../../core/tree';
+import type { TaskPatch } from '../../core/tree';
 import type {
   DateString,
   GanttDay,
   HoursPerDay,
+  PhaseId,
   ScheduleRow,
   Status,
   Task,
 } from '../../core/types';
 import { cx } from '../cx';
+import { DraftInput } from '../DraftInput';
 import { formatTenths, rowProgressPct } from '../format';
-import { ChevronIcon, FireIcon, MemoIcon } from '../icons';
+import { ChevronIcon, FireIcon, MemoIcon, PlusIcon } from '../icons';
+import { parseEffortInput, parseProgressInput } from '../parse';
 import type { RowLayout } from './rowLayout';
 import styles from './Board.module.css';
 
@@ -39,8 +48,14 @@ interface BoardRowProps {
   endDate: DateString | null;
   /** もう一方のモードの完了予定日。この日の列の右に点線を引く */
   otherModeFinish: DateString | null;
+  /** 日程が変わったので、終了日をハイライトするか（SPEC 3.1：約1.5秒） */
+  highlighted: boolean;
   /** 親タスクの開閉を切り替える */
   onToggle: (taskId: string) => void;
+  /** タスクの項目を変える（ストアの updateTask） */
+  onUpdateTask: (taskId: string, patch: TaskPatch) => void;
+  /** 工程の末尾にタスクを足す（ストアの addTaskToPhase） */
+  onAddToPhase: (phaseId: PhaseId) => void;
 }
 
 /** 優先度の記号と、色のクラス名（DESIGN.md：high `!!!`、mid `=`、low `-`） */
@@ -65,9 +80,14 @@ export const BoardRow = memo(function BoardRow(props: BoardRowProps) {
     <div
       className={cx(styles.row, isPhase ? styles.phaseRow : styles.taskRow)}
       data-testid={`row-${layout.row.label}`}
+      data-row-key={layout.row.key}
     >
       <div className={styles.rowLeft}>
-        {isPhase ? <PhaseBand row={layout.row} /> : <TaskCard {...props} />}
+        {isPhase ? (
+          <PhaseBand row={layout.row} onAddToPhase={props.onAddToPhase} />
+        ) : (
+          <TaskCard {...props} />
+        )}
       </div>
       <GanttCells {...props} />
     </div>
@@ -78,12 +98,30 @@ export const BoardRow = memo(function BoardRow(props: BoardRowProps) {
 // 左：工程の帯
 // ---------------------------------------------------------------------------
 
-function PhaseBand({ row }: { row: ScheduleRow }) {
+function PhaseBand({
+  row,
+  onAddToPhase,
+}: {
+  row: ScheduleRow;
+  onAddToPhase: (phaseId: PhaseId) => void;
+}) {
   const isOver = row.status === '超過';
+  const name = nameOfPhase(row);
   return (
     <div className={styles.phaseBand}>
       <div className={styles.colId}>{row.label}</div>
-      <div className={styles.phaseName}>{nameOfPhase(row)}</div>
+      <div className={styles.phaseNameCell}>
+        <span className={styles.phaseName}>{name}</span>
+        {/* 工程の帯からの追加（SPEC 3.1、決定事項57）。工程の行の key は工程の id（PhaseId） */}
+        <button
+          type="button"
+          className={styles.phaseAdd}
+          aria-label={`${name}にタスクを追加`}
+          onClick={() => onAddToPhase(row.key as PhaseId)}
+        >
+          <PlusIcon />
+        </button>
+      </div>
       <div className={styles.colPriority} />
       <div className={styles.colNumberBold}>{formatTenths(row.effortTenths)}</div>
       <div className={styles.colProgress}>{rowProgressPct(row)}%</div>
@@ -115,12 +153,31 @@ const PHASE_NAMES: Record<string, string> = Object.fromEntries(
 // 左：タスクのカード
 // ---------------------------------------------------------------------------
 
-function TaskCard({ layout, task, onToggle }: BoardRowProps) {
+function TaskCard({ layout, task, highlighted, onToggle, onUpdateTask }: BoardRowProps) {
   const { row, childCount, collapsed } = layout;
   const isParent = !row.leaf;
   const isOver = row.status === '超過';
   const name = task?.name ?? '';
   const progress = rowProgressPct(row);
+
+  /**
+   * 工数の欄に打った文字を反映する（5-1）。
+   * 正しい値（0 以上・小数1桁まで）で、今の値と違うときだけ updateTask を呼ぶ。
+   * 同じ値で呼ぶと、何も変わらないのに「元に戻す」の履歴が1件増えてしまうため。
+   */
+  const handleEffort = (text: string) => {
+    const effortTenths = parseEffortInput(text);
+    if (effortTenths !== null && effortTenths !== row.effortTenths) {
+      onUpdateTask(row.key, { effortTenths });
+    }
+  };
+  /** 進捗率の欄に打った文字を反映する（5-1）。正しい値（0〜100 の整数）のときだけ */
+  const handleProgress = (text: string) => {
+    const progressPct = parseProgressInput(text);
+    if (progressPct !== null && progressPct !== row.progressPct) {
+      onUpdateTask(row.key, { progressPct });
+    }
+  };
 
   // 階層を CSS に渡し、字下げとツリー線の位置を CSS の calc で決める（値は tokens.css の indent-step）
   const levelStyle = { '--level': row.level } as CSSProperties;
@@ -160,14 +217,18 @@ function TaskCard({ layout, task, onToggle }: BoardRowProps) {
           )}
         </div>
 
-        {/* 工数・進捗率：末端は入力欄、親は子から集計した値（太字）。入力できるのは段階5から */}
+        {/*
+          工数・進捗率：末端は入力欄、親は子から集計した値（太字）。
+          inputMode="decimal"・"numeric" で、タッチの端末では数字のキーボードを出す
+        */}
         <div className={styles.cardEffort}>
           {row.leaf ? (
-            <input
+            <DraftInput
               className={styles.effortInput}
               aria-label={`${name}の工数（人日）`}
+              inputMode="decimal"
               value={formatTenths(row.effortTenths)}
-              readOnly
+              onDraft={handleEffort}
             />
           ) : (
             <span className={styles.parentNumber}>{formatTenths(row.effortTenths)}</span>
@@ -176,11 +237,12 @@ function TaskCard({ layout, task, onToggle }: BoardRowProps) {
         <div className={styles.cardProgress}>
           {row.leaf ? (
             <>
-              <input
+              <DraftInput
                 className={styles.progressInput}
                 aria-label={`${name}の進捗率（%）`}
+                inputMode="numeric"
                 value={String(row.progressPct)}
-                readOnly
+                onDraft={handleProgress}
               />
               <span className={styles.percent}>%</span>
             </>
@@ -191,7 +253,15 @@ function TaskCard({ layout, task, onToggle }: BoardRowProps) {
         <div className={styles.cardRemaining}>{formatTenths(row.remainingTenths)}</div>
         <div className={styles.colDate}>{row.startDate && formatMonthDay(row.startDate)}</div>
         <div className={styles.colDateCenter}>
-          <span className={cx(styles.endDate, isOver && styles.endDateOver)}>
+          {/* 日程が変わったら、終了日の背景を flash にする（5-3、DESIGN.md の Motion） */}
+          <span
+            className={cx(
+              styles.endDate,
+              isOver && styles.endDateOver,
+              highlighted && styles.endDateFlash,
+            )}
+            data-testid={`end-date-${row.label}`}
+          >
             {row.endDate && formatMonthDay(row.endDate)}
           </span>
         </div>
