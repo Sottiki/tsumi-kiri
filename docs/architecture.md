@@ -57,10 +57,10 @@ src/
     DraftInput.tsx   打っている途中の文字を手元に持つ入力欄。正しい値になったときだけストアに反映する
     undoShortcut.ts  元に戻す・やり直すのキーの判定（React に依存しない）
     useUndoShortcuts.ts  そのキーを画面全体で受け取り、ストアの undo・redo を呼ぶ
-    icons.tsx        線のアイコン（開閉・炎・メモ）
+    icons.tsx        線のアイコン（開閉・炎・メモ・追加の＋）
     download.ts      Blob をファイル名つきでダウンロードさせる（Excel出力。段階8のバックアップでも使う）
     board/           タスク表とガント
-      Board.tsx        スクロールの枠。ストアの値を行に配る
+      Board.tsx        スクロールの枠。ストアの値を行に配る。開いたタスクの行が見えるまで縦にスクロールする
       BoardHeader.tsx  列見出しと、月・曜日・日付の3段
       BoardRow.tsx     1行（工程の帯かタスクのカード、ツリー線、日付のマスとバー）
       rowLayout.ts     子の数・ツリー線・たたんで隠れる行を、行の並びから求める（React に依存しない）
