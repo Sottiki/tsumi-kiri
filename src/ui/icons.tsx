@@ -77,3 +77,26 @@ export function MemoIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+/**
+ * 追加（＋）。工程の帯の「＋」ボタンで使う（DESIGN.md の工程の帯：12px、線の太さ 2.5px）。
+ * ボタンの側に aria-label で名前を付けるので、アイコンは飾りにする
+ */
+export function PlusIcon({ className }: IconProps) {
+  return (
+    <svg
+      className={className}
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+    >
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
+  );
+}

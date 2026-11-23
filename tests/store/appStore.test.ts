@@ -15,7 +15,6 @@ import {
   type AppStore,
 } from '../../src/store/appStore';
 import { HIGHLIGHT_MS } from '../../src/store/derived';
-import { MERGE_WINDOW_MS } from '../../src/store/history';
 import {
   BROKEN_STORAGE_KEY,
   createMemoryBackend,
@@ -25,16 +24,12 @@ import {
   type KeyValueBackend,
 } from '../../src/store/persistence';
 
-/** テストの「今の時刻」。履歴のまとめ（1秒以内）を確かめるときに進める */
-let clock = 0;
-
 /** テスト用のストアを作る。今日は画面案と同じ 2026-11-19、id は順に振る */
 function makeStore(backend: KeyValueBackend = createMemoryBackend()): AppStore {
   let n = 0;
   return createAppStore({
     persistence: createPersistence(backend),
     today: () => '2026-11-19',
-    now: () => clock,
     makeId: () => `id${++n}`,
   });
 }
@@ -46,7 +41,6 @@ function taskAt(store: AppStore, phaseIndex: number, taskIndex: number): Task {
 
 beforeEach(() => {
   vi.useFakeTimers();
-  clock = 0;
 });
 afterEach(() => {
   vi.useRealTimers();
@@ -136,17 +130,26 @@ describe('3-3 元に戻す・やり直す', () => {
     expect(taskAt(store, 0, 0).effortTenths).toBe(50);
   });
 
-  it('同じ欄への1秒以内の続けての入力は、1回で戻る', () => {
+  it('同じ編集の回（editSession）の入力は、1回で戻る', () => {
     const store = makeStore();
     const { actions } = store.getState();
     const id = taskAt(store, 0, 0).id;
     for (const value of [3, 35, 350]) {
-      actions.updateTask(id, { effortTenths: value });
-      clock += MERGE_WINDOW_MS / 2;
+      actions.updateTask(id, { effortTenths: value }, 'session-1');
     }
     actions.undo();
     expect(taskAt(store, 0, 0).effortTenths).toBe(20);
     expect(selectCanUndo(store.getState())).toBe(false);
+  });
+
+  it('編集の回が違えば（欄に入り直したら）、別の1件になる', () => {
+    const store = makeStore();
+    const { actions } = store.getState();
+    const id = taskAt(store, 0, 0).id;
+    actions.updateTask(id, { effortTenths: 30 }, 'session-1');
+    actions.updateTask(id, { effortTenths: 40 }, 'session-2');
+    actions.undo();
+    expect(taskAt(store, 0, 0).effortTenths).toBe(30);
   });
 
   it('PJTタブと通常／残業の切り替えは履歴に入れず、戻しても今の表示のまま', () => {

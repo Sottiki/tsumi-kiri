@@ -3,7 +3,9 @@
  *
  * - 通常 8h ／ 残業 10h の切り替え：表示の切り替えなので、この段階から動かす。
  *   ストアの setOvertime は「元に戻す」の履歴に入れない（SPEC 3.1）
- * - ＋タスク追加：段階5（5-4）で動かす。今は押しても何もしない
+ * - ＋タスク追加（5-4）：開いているタスクと同じ工程の末尾（開いていなければ最初の工程の末尾）に足す。
+ *   追加先の決め方はストアの addTask（core/tree.ts の phaseForNewTask）に任せる。
+ *   足したタスクは「開いているタスク」になり、段階6でそのまま詳細パネルが開く（SPEC 3.1）
  * - 凡例：完了分、残り、エンド日超過、土日祝、今日、エンド日、期日超過の7つ（DESIGN.md の Components）
  */
 
@@ -15,6 +17,7 @@ import styles from './Toolbar.module.css';
 export function Toolbar() {
   const overtime = useAppStore((state) => state.computed.overtime);
   const setOvertime = useAppStore((state) => state.actions.setOvertime);
+  const addTask = useAppStore((state) => state.actions.addTask);
 
   return (
     <section className={styles.toolbar}>
@@ -38,7 +41,8 @@ export function Toolbar() {
         </button>
       </div>
 
-      <button type="button" className={controls.addTask}>
+      {/* addTask は足したタスクの id を返すが、ここでは使わないので、矢印関数で包んで捨てる */}
+      <button type="button" className={controls.addTask} onClick={() => void addTask()}>
         ＋ タスク追加
       </button>
 

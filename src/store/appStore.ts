@@ -67,7 +67,11 @@ export interface AppActions {
   /** PJTタブの切り替え。元に戻す対象にしない */
   selectProject(projectId: string): void;
   /** 表示中のPJTの名前・開始日・エンド日を変える */
-  updateProject(patch: ProjectPatch): void;
+  /**
+   * 表示中のPJTの名前・開始日・エンド日を変える。
+   * @param editSession 入力欄の編集の回の目印。同じ目印の変更は、元に戻すの履歴で1件にまとめる
+   */
+  updateProject(patch: ProjectPatch, editSession?: string): void;
   /** 通常／残業の切り替え。元に戻す対象にしない */
   setOvertime(overtime: boolean): void;
 
@@ -84,7 +88,11 @@ export interface AppActions {
   deleteTask(taskId: string): void;
   reorderTask(taskId: string, overTaskId: string): void;
   moveTask(taskId: string, target: { phaseId: PhaseId; parentId: string | null }): void;
-  updateTask(taskId: string, patch: TaskPatch): void;
+  /**
+   * タスクの項目を変える。
+   * @param editSession 入力欄の編集の回の目印。同じ目印の変更は、元に戻すの履歴で1件にまとめる
+   */
+  updateTask(taskId: string, patch: TaskPatch, editSession?: string): void;
 
   // --- 休業日・有給（SPEC 5章） ---
   addDaysOff(daysOff: readonly DayOff[]): void;
@@ -119,8 +127,6 @@ export interface AppStoreOptions {
   persistence: AppPersistence;
   /** 今日の日付を返す関数。テストで日付を固定できるよう、差し替えられる */
   today?: () => DateString;
-  /** 今の時刻（ミリ秒）を返す関数。履歴のまとめ（1秒以内）に使う */
-  now?: () => number;
   /** id の作り方。テストで id を決まった値にするため */
   makeId?: IdGenerator;
 }
@@ -144,12 +150,14 @@ export function localToday(now: Date = new Date()): DateString {
 }
 
 /**
- * 「同じ欄への続けての入力」をまとめるための目印を作る（store/history.ts の recordChange）。
- * 1つの欄だけを変えるときは '種類:id:欄の名前'、複数の欄を一度に変えるときはまとめない（null）。
+ * 入力欄の「編集の回の目印」から、履歴をまとめるための目印を作る（store/history.ts の recordChange）。
+ * 目印がない変更（ボタンでの変更など）は、まとめない（null）。
+ *
+ * 欄に入ってから離れるまでの入力を1件にまとめる（SPEC 3.1、決定事項61）。
+ * 目印は欄にカーソルが入るたびに新しくなるので、同じ欄でも、入り直したら別の1件になる。
  */
-function mergeKeyOf(kind: string, id: string, patch: object): string | null {
-  const fields = Object.keys(patch);
-  return fields.length === 1 ? `${kind}:${id}:${fields[0]}` : null;
+function mergeKeyOf(editSession: string | undefined): string | null {
+  return editSession === undefined ? null : `edit:${editSession}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -159,7 +167,6 @@ function mergeKeyOf(kind: string, id: string, patch: object): string | null {
 export function createAppStore(options: AppStoreOptions): AppStore {
   const { persistence } = options;
   const today = options.today ?? (() => localToday());
-  const now = options.now ?? (() => Date.now());
   const makeId = options.makeId ?? newId;
 
   /** ハイライトを消すタイマー。新しくハイライトしたら、前のタイマーは止める */
@@ -214,13 +221,13 @@ export function createAppStore(options: AppStoreOptions): AppStore {
 
         /**
          * 履歴に残す変更。update が同じデータを返したら（何も変わらなかったら）、何もしない。
-         * @param mergeKey 同じ欄への続けての入力をまとめるための目印（history.ts）
+         * @param mergeKey 1件にまとめるための目印（history.ts）
          */
         const change = (update: (data: AppData) => AppData, mergeKey: string | null = null) => {
           const { data, history } = get();
           const next = update(data);
           if (next === data) return;
-          commit(next, recordChange(history, data, mergeKey, now()));
+          commit(next, recordChange(history, data, mergeKey));
         };
 
         /** 履歴に残さない変更（PJTタブと、通常／残業の切り替え。SPEC 3.1） */
@@ -256,10 +263,10 @@ export function createAppStore(options: AppStoreOptions): AppStore {
             change((data) => appOps.reorderProject(data, projectId, overProjectId)),
           selectProject: (projectId) =>
             switchView((data) => appOps.setActiveProject(data, projectId)),
-          updateProject: (patch) =>
+          updateProject: (patch, editSession) =>
             changeActive(
               (project) => appOps.updateProject(project, patch),
-              mergeKeyOf('project', get().data.activeId, patch),
+              mergeKeyOf(editSession),
             ),
           setOvertime: (overtime) =>
             switchView((data) =>
@@ -285,10 +292,10 @@ export function createAppStore(options: AppStoreOptions): AppStore {
             changeActive((project) => treeOps.reorderTask(project, taskId, overTaskId)),
           moveTask: (taskId, target) =>
             changeActive((project) => treeOps.moveTask(project, taskId, target)),
-          updateTask: (taskId, patch) =>
+          updateTask: (taskId, patch, editSession) =>
             changeActive(
               (project) => treeOps.updateTask(project, taskId, patch),
-              mergeKeyOf('task', taskId, patch),
+              mergeKeyOf(editSession),
             ),
 
           addDaysOff: (daysOff) => change((data) => appOps.addDaysOff(data, daysOff)),

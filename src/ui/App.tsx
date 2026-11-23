@@ -6,15 +6,19 @@
  * こうすると、ヘッダやカードは上に見えたまま、表とガントだけを動かせる（SPEC 3.1 の見出しの固定のため）。
  *
  * PJTタブ（段階8）と詳細パネル（段階6）は、それぞれの段階で足す。
+ *
+ * 元に戻す・やり直すのキー（Ctrl+Z・Ctrl+Shift+Z・Ctrl+Y）は、画面全体で受けるので、ここで仕掛ける。
  */
 
 import { Board } from './board/Board';
 import { ProjectHeader } from './ProjectHeader';
 import { SummaryCards } from './SummaryCards';
 import { Toolbar } from './Toolbar';
+import { useUndoShortcuts } from './useUndoShortcuts';
 import styles from './App.module.css';
 
 export function App() {
+  useUndoShortcuts();
   return (
     <main className={styles.app}>
       <ProjectHeader />

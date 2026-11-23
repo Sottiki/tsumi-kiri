@@ -235,14 +235,40 @@
   font-weight: 600;
 }
 
-/* 工程名は 12px の太字、字間 0.04em（DESIGN.md の Typography） */
-.phaseName {
+/* 工程名と「＋」のボタンを並べる欄。残りの幅をすべて使う */
+.phaseNameCell {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+/* 工程名は 12px の太字、字間 0.04em（DESIGN.md の Typography） */
+.phaseName {
   font-family: var(--typography-label-md-font-family);
   font-size: var(--typography-body-sm-font-size);
   font-weight: 700;
   letter-spacing: 0.04em;
+}
+
+/*
+ * 工程の帯の「＋」（DESIGN.md の工程の帯。段階5で決定）。18 × 18px、背景なし、角丸 xs。
+ * アイコンの色は帯の文字と同じ on-phase（currentColor）
+ */
+.phaseAdd {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--rounded-xs);
+  background: none;
+  color: var(--color-on-phase);
+  cursor: pointer;
 }
 
 .phaseEnd {
@@ -447,6 +473,17 @@
   padding: 1px 5px;
   border-radius: var(--rounded-xs);
   font-weight: 600;
+  /* ハイライトが消えるときは、0.8秒かけて元の背景に戻す（DESIGN.md の Motion） */
+  transition: background-color 0.8s ease;
+}
+/*
+ * 日程が変わった終了日のハイライト（5-3）。
+ * 光るときは待たずにすぐ変えたいので、こちらでは transition を切る。
+ * クラスが外れると .endDate の transition が効くので、消えるときだけゆっくりになる
+ */
+.endDateFlash {
+  background: var(--color-flash);
+  transition: none;
 }
 .endDateOver {
   color: var(--color-error);
