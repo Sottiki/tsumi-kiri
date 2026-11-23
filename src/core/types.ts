@@ -190,3 +190,77 @@ export interface ScheduleRow {
   /** 期日超過か（終了日がそのタスクの期日より後。完了したタスクには付けない。SPEC 5章） */
   overDue: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// 日程の計算に使う値と、計算結果（core/calendar.ts・core/schedule.ts が作る）
+// ---------------------------------------------------------------------------
+
+/** 1日の稼働時間。通常 8 時間、残業 10 時間 */
+export type HoursPerDay = 8 | 10;
+
+/**
+ * ガントの見出しでの日の種類（SPEC 3.1）。
+ * - 'work'    ：稼働日
+ * - 'weekend' ：土日（グレー。日付はそのまま出す）
+ * - 'off'     ：祝日・休業日・有給（グレー。日付の代わりに「休」と出す）
+ *
+ * 土日と祝日が重なった日（土曜の祝日など）や、土日に入れた休業日は 'off' にする。
+ * 「休」と出したほうが、その日が祝日・休業日だと分かるため。
+ */
+export type DayKind = 'work' | 'weekend' | 'off';
+
+/** 完了予定のカード1枚ぶん（通常 8h ／ 残業 10h） */
+export interface FinishForecast {
+  /** 完了予定日（最後のタスクの終了日）。タスクがなければ null */
+  finishDate: DateString | null;
+  /**
+   * エンド日を何営業日超えるか。間に合うなら 0（「エンド日に間に合う」）。
+   * エンド日が空欄か、タスクがなければ null（「エンド日未設定」など。SPEC 3.1）
+   */
+  overrunWorkdays: number | null;
+}
+
+/** 上部のカード4枚に出す値（SPEC 3.1） */
+export interface SummaryCards {
+  /** 総工数（0.1人日単位） */
+  totalEffortTenths: number;
+  /** 残工数（0.1人日単位）。末端の残工数の合計 */
+  remainingTenths: number;
+  /** PJT全体の進捗率。タスクのある工程の進捗率の単純平均（小数のまま。TC-04・TC-33） */
+  progressPct: number;
+  /** エンド日。空欄なら null */
+  endDate: DateString | null;
+  /** 今日の翌日からエンド日までの営業日。今日がエンド日と同じか後なら 0。エンド日が空欄なら null（TC-30） */
+  workdaysUntilEnd: number | null;
+  normal: FinishForecast;
+  overtime: FinishForecast;
+  /** 残業なら通常より何営業日早く終わるか。タスクがなければ null */
+  shortenedWorkdays: number | null;
+}
+
+/** ガントの1列（1日）。土日・祝日も含めて、暦の上のすべての日を並べる */
+export interface GanttDay {
+  date: DateString;
+  /** 稼働日・土日・休（祝日と休業日）のどれか。見出しの色と「休」の表示に使う */
+  kind: DayKind;
+  /** 開始日から数えた稼働日の番号。稼働日でない日は null */
+  workdayIndex: number | null;
+}
+
+/** バーの1マス（1稼働日） */
+export interface BarCell {
+  /** 開始日から数えた稼働日の番号。GanttDay.workdayIndex と突き合わせて、どの列に塗るかを決める */
+  workdayIndex: number;
+  /** 完了分（濃い色）なら true、残り（薄い色）なら false */
+  done: boolean;
+}
+
+/** 警告1件。画面では太字の1行目（title）と、通常の2行目（detail）に分けて出す（DESIGN.md 警告の枠） */
+export interface Warning {
+  /** どちらの締め切りを超えたか */
+  kind: 'due' | 'end';
+  /** 例：「終了予定 1/4(月) は期日 12/25 を 5 営業日超えています」 */
+  title: string;
+  /** 例：「残業 10h なら 12/23(水) に終わり、期日に間に合います。」 */
+  detail: string;
+}

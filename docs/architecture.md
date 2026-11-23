@@ -53,7 +53,7 @@ e2e/               画面のテスト（Playwright Test）
 AppData（保存するデータ）
    │  ストアが持つ。変更は「操作」を通してだけ行う
    ▼
-schedule(project, daysOff, 8 or 10, 今日)   ← core の純粋な関数
+schedule(project, daysOff, 8 or 10)   ← core の純粋な関数
    │  表示中のPJTについて、通常と残業の両方を計算する
    ▼
 行の一覧（ScheduleRow[]）と、カード用の集計
@@ -62,7 +62,7 @@ schedule(project, daysOff, 8 or 10, 今日)   ← core の純粋な関数
 ```
 
 - 計算結果は保存しない。データが変わるたびに作り直す。PJTとモードが同じなら、前回の結果と比べて開始日・終了日が変わった行を「ハイライト対象」にする（SPEC 3.1）
-- 「今日」は計算の引数として渡す。テストで日付を固定できるようにするため
+- 「今日」は、使う計算（カード用の集計 `summarizeCards`）の引数として渡す。テストで日付を固定できるようにするため。日程そのもの（`schedule`）は今日に左右されない
 
 ## 4. データの型
 
@@ -135,6 +135,8 @@ interface ScheduleRow {
   overDue: boolean;     // 期日超過
 }
 ```
+
+- カード用の集計（`SummaryCards`）、ガントの日（`GanttDay`）、バーのマス（`BarCell`）、警告（`Warning`）など、ほかの計算結果の型も `types.ts` に置く。画面と Excel の両方から使うため
 
 ## 5. 計算（core/schedule.ts）
 
