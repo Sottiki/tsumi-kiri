@@ -64,6 +64,8 @@ e2e/               画面のテスト（Playwright Test）
 ```
 
 - 依存の向きは `ui → store → core`、`excel → core` の一方向にする。core は React も DOM も使わない
+  - ui は、型と表示用の純粋な関数（`schedule` の `barCells`、`calendar` の日付の書式など）を core から直接使ってよい。データを変えるのは、必ず store の操作を通す
+  - Excel出力のボタン（段階9B）からは、ui が excel を使う（`ui → excel → core`）。excel は store も ui も使わない
 - core の中の依存：`schedule → calendar`、`storage → calendar・tree`、`sample → calendar・tree・storage`、`appData → calendar`。どれも `types` を使う。輪にならないようにする
 - 日付の計算（日数の差、週の月曜、日付の形の検証など）は `calendar.ts` にまとめ、ほかのファイルで同じものを書かない
 - 計算は core に閉じ込め、Vitest で画面なしに確かめられるようにする
