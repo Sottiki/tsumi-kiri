@@ -39,6 +39,8 @@ src/
   excel/           Excel出力（ExcelJS でブックを組み立てる）
     colors.ts        DESIGN.md の色のうち、Excel で使うものを書き写した定数
     workbook.ts      ブックを組み立てる（buildWorkbook）
+    fileName.ts      ファイル名（工数ガント_<PJT名>_<出力日>.xlsx）を作る
+    exportFile.ts    ブックを .xlsx の Blob にし、ファイル名と組にする（createExcelFile）
   store/           Zustand のストア、元に戻す履歴、localStorage への保存
     appStore.ts      ストア本体（createAppStore）。テストではここから作る
     history.ts       元に戻す・やり直すの履歴
@@ -52,6 +54,7 @@ src/
     controls.module.css  ボタン・入力欄の共通の見た目
     format.ts        数値の書式（工数 3.5、進捗の整数%）
     icons.tsx        線のアイコン（開閉・炎・メモ）
+    download.ts      Blob をファイル名つきでダウンロードさせる（Excel出力。段階8のバックアップでも使う）
     board/           タスク表とガント
       Board.tsx        スクロールの枠。ストアの値を行に配る
       BoardHeader.tsx  列見出しと、月・曜日・日付の3段
@@ -252,7 +255,7 @@ App
 ## 9. Excel出力（excel/）
 
 - 画面と同じ計算結果（ScheduleRow）から、ExcelJS（4.4.0 に固定）でブックを組み立てる。シートは通常と残業の2枚（SPEC 3.3）
-- 入口は `buildWorkbook(project, daysOff, today): ExcelJS.Workbook`（`excel/workbook.ts`）。ファイルにする（`writeBuffer`）のとダウンロードは段階9B で行う
+- 入口は `buildWorkbook(project, daysOff, today): ExcelJS.Workbook`（`excel/workbook.ts`）。ファイルにする（`writeBuffer`）のは `createExcelFile`（`excel/exportFile.ts`）、ダウンロードは `downloadBlob`（`ui/download.ts`）で行う
   - 日程は `schedule`、日付の列は `listGanttDays`、バーのマスは `barCells`、2行目の完了予定と総工数は `summarizeCards` を使い、excel/ では計算しない。`today` は `summarizeCards` に渡すために受け取る
   - 日付の列は、残業のシートでも通常 8h の完了予定から決める（2枚の列がそろう）
 - 画面案②の構成：
@@ -270,8 +273,13 @@ App
 | 値 | 工数・残工数は数値（書式 `0.0`）、進捗は数値（書式 `0%`。親・工程は画面と同じく整数%に丸める）、日付は `2026-11-24` の文字 |
 
 - 6行目、K列（日付の始まり）でウィンドウ枠を固定する
-- ファイル名は `工数ガント_<PJT名>_<出力日>.xlsx`
+- ファイル名は `工数ガント_<PJT名>_<出力日>.xlsx`（`excel/fileName.ts`。決まりは SPEC 3.3）
+  - 出力日は、ストアと同じ `localToday()`（使っている人のPCの日付）で出す
 - ダウンロードは Blob とリンクのクリックで行う（`file://` でも動く）
+  - 「Excel出力」を押すと、ProjectHeader がストアから表示中のPJTと休業日を読み（`appStore.getState()`）、`createExcelFile` でファイルを作って `downloadBlob` に渡す
+  - 作っている間にもう一度押されても、2つ目は作らない
+  - 失敗したら alert で知らせる。段階8で、ストアの知らせ（`notice`）に移す
+- ExcelJS を画面に組み込むので、ビルドした HTML は約 1.4MB（gzip で約 360KB）になる。1つの HTML にまとめるため、読み込みを後回しにする（動的 import）ことはしない
 
 ## 10. テスト・ビルド・公開
 
