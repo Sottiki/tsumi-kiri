@@ -47,8 +47,18 @@ src/
     index.ts         画面で使う1つだけのストアと useAppStore。閉じる直前の保存もここで仕掛ける
   ui/              画面のコンポーネント
     tokens.css       DESIGN.md のトークンを CSS 変数にしたもの
+    App.tsx          画面全体の並び
+    ProjectHeader.tsx・SummaryCards.tsx・Toolbar.tsx   ヘッダ、上部のカード、操作の列
+    controls.module.css  ボタン・入力欄の共通の見た目
+    format.ts        数値の書式（工数 3.5、進捗の整数%）
+    icons.tsx        線のアイコン（開閉・炎・メモ）
+    board/           タスク表とガント
+      Board.tsx        スクロールの枠。ストアの値を行に配る
+      BoardHeader.tsx  列見出しと、月・曜日・日付の3段
+      BoardRow.tsx     1行（工程の帯かタスクのカード、ツリー線、日付のマスとバー）
+      rowLayout.ts     子の数・ツリー線・たたんで隠れる行を、行の並びから求める（React に依存しない）
   main.tsx
-tests/             core と excel のテスト（docs/test-cases.md の例を元にする）
+tests/             core と excel のテスト（docs/test-cases.md の例を元にする）。ui/ の React に依存しない関数のテストも置く
   helpers.ts       テストのデータを人の読む形（工数 3.5・進捗 60%）で短く作るための関数
 e2e/               画面のテスト（Playwright Test）
 ```
@@ -230,6 +240,10 @@ App
 - ガントは1日1セルで描く（画面案と同じ）。1行は、左に固定したカード（幅820px）と、日付のセルを横に並べた形にする
 - 行は id をキーにし、`React.memo` で変わった行だけを描き直す。100行×100日程度なら仮想スクロールはいらない
 - 縦の固定（見出し）と横の固定（タスク表）は、どちらも CSS の `position: sticky` で行う
+  - `sticky` は一番近いスクロールの枠に対して効く。横スクロールの枠の中にある見出しは、ページ全体の縦スクロールに対しては固定できない。そこで、タスク表とガントの枠を画面の残りの高さいっぱいに広げ、その枠の中で縦横にスクロールさせる（SPEC 3.1）
+  - 画面全体は `height: 100vh` の縦の flex にし、枠（Board）だけが `flex: 1` で伸びる
+- 字下げとツリー線の位置は、行の階層を CSS 変数（`--level`）で渡し、CSS の `calc` と `indent-step` のトークンで決める
+- ScheduleRow は優先度・期日・メモと工程の名前を持たないので、画面では元のタスク（id から引く表）と `PHASES` から取り出す
 - 見た目（色・文字・寸法・部品）は DESIGN.md に従う。トークンは `ui/tokens.css` に CSS 変数として置き、CSS Modules からはその変数だけを参照する。変数名は DESIGN.md のトークン名から作る（例：`colors.primary` → `--color-primary`、`spacing.layout.day-width` → `--spacing-layout-day-width`）
 - Excel出力の色は、同じ DESIGN.md のトークンを excel/ から TypeScript の定数として参照する（CSS 変数は使えないため）。定数は `excel/colors.ts` に手で書き写し、キーはトークン名と同じにする。DESIGN.md と同じ値かは `tests/excel-colors.test.ts` が DESIGN.md を読んで確かめる（決定 2026-11-23。YAML を読むライブラリを足さずに、写し間違いと直し忘れを防ぐ）
 
