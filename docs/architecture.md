@@ -66,28 +66,49 @@ schedule(project, daysOff, 8 or 10, 今日)   ← core の純粋な関数
 
 ## 4. データの型
 
-SPEC 7章の構造に沿う。
+型は `src/core/types.ts` に置く。メモリの形と保存する形の2種類を持つ（決定 2026-11-23）。
+
+- **メモリの形**（`AppData` など）：アプリが動いている間に使う。工数と進捗率を整数で持ち、計算で小数の誤差が出ないようにする（5章）
+- **保存する形**（`SavedAppData` など）：localStorage とバックアップファイルに書く。SPEC 7章のとおり小数で持つ
+- 2つの形の変換は `core/storage.ts` の2つの関数だけで行い、ほかの場所では変換しない。変換が散らばると、変換し忘れたところで誤差が出るため
 
 ```ts
+type DateString = string;  // 'YYYY-MM-DD'
 type Priority = 'high' | 'mid' | 'low';
+type PhaseId = 'req' | 'design' | 'impl' | 'test' | 'release';
+type Status = '完了' | '進行中' | '未着手' | '超過';
 
+// メモリの形
 interface Task {
   id: string;
   name: string;
-  effort: number;      // 人日。末端だけが使う
-  progress: number;    // 0〜1。末端だけが使う
+  effortTenths: number;  // 工数。0.1人日単位の整数（3.5人日 → 35）。末端だけが使う
+  progressPct: number;   // 進捗率。0〜100 の整数。末端だけが使う
   priority: Priority;
-  due: string | null;  // 'YYYY-MM-DD'
+  due: DateString | null;
   memo: string;
   children: Task[];
 }
-
 interface Phase { id: PhaseId; name: string; tasks: Task[] }   // 5本で固定
-interface Project { id: string; name: string; start: string; end: string | null; overtime: boolean; phases: Phase[] }
-interface DayOff { date: string; label: string }
+interface Project { id: string; name: string; start: DateString; end: DateString | null; overtime: boolean; phases: Phase[] }
+interface DayOff { date: DateString; label: string }
 interface AppData { version: number; activeId: string; projects: Project[]; daysOff: DayOff[] }
+
+// 保存する形。工数・進捗率だけが違い、ほかの項目はメモリの形と同じ
+interface SavedTask extends Omit<Task, 'effortTenths' | 'progressPct' | 'children'> {
+  effort: number;    // 人日の小数（3.5）
+  progress: number;  // 0〜1 の小数（0.6）
+  children: SavedTask[];
+}
+// SavedPhase・SavedProject・SavedAppData も同じように、tasks・phases・projects を保存する形に置き換える
+
+// 変換（core/storage.ts。段階2の 2-9 で作る）
+function fromSaved(saved: unknown): { ok: true; data: AppData } | { ok: false; reason: string };
+function toSaved(data: AppData): SavedAppData;
 ```
 
+- `fromSaved` は、形を検証してから `Math.round(effort × 10)`・`Math.round(progress × 100)` で整数にする。古いバージョンからの移行もここで行う。壊れていれば読み込まずに理由を返す
+- `toSaved` は、`effortTenths ÷ 10`・`progressPct ÷ 100` で小数に戻す
 - 日付はすべて `'YYYY-MM-DD'` の文字列で持つ。タイムゾーンのずれを避けるため、計算でも `Date` は使い捨てにする
 - エンド日は空欄があり得るので `string | null`（SPEC 3.1）
 - 工程の id は固定の値（`req` `design` `impl` `test` `release`）にする
@@ -103,13 +124,14 @@ interface ScheduleRow {
   label: string;        // '1-2-1'
   level: number;        // 工程 0、親 1、子 2、孫 3
   leaf: boolean;
-  start: number | null; // 稼働日の通し番号（小数あり）。タスクのない工程は null
+  start: number | null; // 開始位置。0.1時間単位の整数（5章）。タスクのない工程・親は null
   end: number | null;
-  startDate: string | null;
-  endDate: string | null;
-  effort: number;
-  progress: number;
-  status: '完了' | '進行中' | '未着手' | '超過';
+  startDate: DateString | null;
+  endDate: DateString | null;
+  effortTenths: number;    // 0.1人日単位の整数。親・工程は子の合計
+  progressPct: number;     // 末端は整数。親・工程は単純平均なので小数のまま
+  remainingTenths: number; // 残工数。0.1人日単位の整数
+  status: Status;
   overDue: boolean;     // 期日超過
 }
 ```
@@ -156,10 +178,11 @@ JavaScript の数値は2進数の小数なので、`0.1 + 0.2` は `0.3000000000
 
 ## 7. 保存
 
-- localStorage のキーは `tsumikiri:data`。中身は `AppData` の JSON
+- localStorage のキーは `tsumikiri:data`。中身は保存する形（`SavedAppData`）の JSON
 - Zustand の `persist` で保存する。変更してから 300ms 後にまとめて書き込む
+- `persist` は、書き込むときに `toSaved`、読み込むときに `fromSaved` を通す（4章）。通さないと、メモリの形（整数）のまま保存されてしまう
 - `version` を持たせ、形が変わったときは storage.ts で古い形から移行する
-- バックアップファイルは同じ JSON。読み込むときは形を検証し、壊れていれば読み込まずに理由を表示する
+- バックアップファイルも同じ形（`SavedAppData`）の JSON。読み込むときは形を検証し、壊れていれば読み込まずに理由を表示する
 - 容量不足などで保存に失敗したら、画面に知らせる（データは画面上に残る）
 - 初めて開いたとき（保存データがないとき）は、サンプルPJTを作る（SPEC 3.1）
 
