@@ -317,7 +317,8 @@ components:
 - **緑（success）**：完了予定がエンド日に間に合うときのカードだけに使う
 - **橙（warning・fire）**：優先度 mid、「期日超過」の札、炎アイコン
 - **暦**：土日祝の列は `day-off`、今日の列は `today`（日付の見出しは `today-head`）。日曜・祝日の文字は `sunday`、土曜の文字は `saturday`。日程が変わった終了日のハイライトは `flash`
-- **Excel出力**：見出し `excel-header`、罫線 `excel-grid`、土日祝 `excel-day-off`、工程の行 `phase-row`、親の行 `excel-parent-row`。バーの色は画面と同じ
+- **Excel出力**：見出し `excel-header`、罫線 `excel-grid`、土日祝 `excel-day-off`、工程の行 `phase-row`、親の行 `excel-parent-row`。バーの色は画面と同じ（工程の残りも画面と同じ `phase-rest`）。エンド日を超えた末端の行の文字は `error`。工程・親は超過しても文字は `on-surface` のまま、バーだけ赤にする
+  - Excel のセルには CSS 変数を使えないので、使う色を `src/excel/colors.ts` に書き写す。キーはトークン名と同じにし、DESIGN.md と同じ値かを Vitest（`tests/excel-colors.test.ts`）で確かめる。ここの色を変えたら、colors.ts も合わせる
 
 ## Typography
 
@@ -340,6 +341,14 @@ components:
 | `numeric-xs` | ガントの日付の見出し |
 
 - 工程の帯の工程名は 12px の太字、字間 0.04em
+- **Excel出力**：書体は **游ゴシック**（Windows・Mac の Office に標準で入っている。Noto Sans JP は上司の PC にないことがあるため）。文字の大きさは画面案②の px を pt にした値（× 0.75 を 0.5pt 刻み）にする
+
+| 使う場所 | 画面案② | Excel |
+|---|---|---|
+| 1行目のタイトル（太字） | 14px | 10.5pt |
+| 2行目の条件、タスク表 | 11px | 8pt |
+| 3行目の月（太字） | 10px | 7.5pt |
+| 4・5行目の日と曜日 | 9px | 7pt |
 - 警告の文章は行の高さ 1.7
 
 ## Layout

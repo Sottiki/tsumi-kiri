@@ -37,6 +37,8 @@ src/
     sample.ts        サンプルPJT（開いた日に合わせて日付をずらす）
     storage.ts       保存形式の検証とバージョン移行
   excel/           Excel出力（ExcelJS でブックを組み立てる）
+    colors.ts        DESIGN.md の色のうち、Excel で使うものを書き写した定数
+    workbook.ts      ブックを組み立てる（buildWorkbook）
   store/           Zustand のストア、元に戻す履歴、localStorage への保存
     appStore.ts      ストア本体（createAppStore）。テストではここから作る
     history.ts       元に戻す・やり直すの履歴
@@ -229,11 +231,14 @@ App
 - 行は id をキーにし、`React.memo` で変わった行だけを描き直す。100行×100日程度なら仮想スクロールはいらない
 - 縦の固定（見出し）と横の固定（タスク表）は、どちらも CSS の `position: sticky` で行う
 - 見た目（色・文字・寸法・部品）は DESIGN.md に従う。トークンは `ui/tokens.css` に CSS 変数として置き、CSS Modules からはその変数だけを参照する。変数名は DESIGN.md のトークン名から作る（例：`colors.primary` → `--color-primary`、`spacing.layout.day-width` → `--spacing-layout-day-width`）
-- Excel出力の色は、同じ DESIGN.md のトークンを excel/ から TypeScript の定数として参照する（CSS 変数は使えないため）。DESIGN.md から定数を作る方法は、実装の段階で決める
+- Excel出力の色は、同じ DESIGN.md のトークンを excel/ から TypeScript の定数として参照する（CSS 変数は使えないため）。定数は `excel/colors.ts` に手で書き写し、キーはトークン名と同じにする。DESIGN.md と同じ値かは `tests/excel-colors.test.ts` が DESIGN.md を読んで確かめる（決定 2026-11-23。YAML を読むライブラリを足さずに、写し間違いと直し忘れを防ぐ）
 
 ## 9. Excel出力（excel/）
 
-- 画面と同じ計算結果（ScheduleRow）から、ExcelJS でブックを組み立てる。シートは通常と残業の2枚（SPEC 3.3）
+- 画面と同じ計算結果（ScheduleRow）から、ExcelJS（4.4.0 に固定）でブックを組み立てる。シートは通常と残業の2枚（SPEC 3.3）
+- 入口は `buildWorkbook(project, daysOff, today): ExcelJS.Workbook`（`excel/workbook.ts`）。ファイルにする（`writeBuffer`）のとダウンロードは段階9B で行う
+  - 日程は `schedule`、日付の列は `listGanttDays`、バーのマスは `barCells`、2行目の完了予定と総工数は `summarizeCards` を使い、excel/ では計算しない。`today` は `summarizeCards` に渡すために受け取る
+  - 日付の列は、残業のシートでも通常 8h の完了予定から決める（2枚の列がそろう）
 - 画面案②の構成：
 
 | 項目 | 内容 |
@@ -242,7 +247,11 @@ App
 | 行 | 1行目タイトル、2行目条件、3行目月、4行目 列見出し＋日、5行目曜日、6行目からタスク |
 | バー | 1日1セルを塗る。完了分か残りかは、画面と同じ決まりで決める（5章） |
 | 字下げ | 階層ごとに全角スペース |
-| 色 | DESIGN.md の Colors（Excel出力）のトークンを使う。エンド日の列の右は `end-line` の線 |
+| 色 | DESIGN.md の Colors（Excel出力）のトークンを使う。エンド日の列の右は `end-line` の線（Excel の「中」の太さ） |
+| 罫線 | 画面案②と同じく、各セルの右と下に `excel-grid` の細い線 |
+| 書体・文字の大きさ | 游ゴシック。大きさは DESIGN.md の Typography（Excel出力） |
+| 行の高さ | 15pt（画面案②の 20px） |
+| 値 | 工数・残工数は数値（書式 `0.0`）、進捗は数値（書式 `0%`。親・工程は画面と同じく整数%に丸める）、日付は `2026-11-24` の文字 |
 
 - 6行目、K列（日付の始まり）でウィンドウ枠を固定する
 - ファイル名は `工数ガント_<PJT名>_<出力日>.xlsx`
