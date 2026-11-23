@@ -3,7 +3,7 @@
  *
  * test-cases.md の例は「工数 3.5」「進捗 60%」のように人の読む形で書いてあるので、
  * ここで受け取ってメモリの形（effortTenths: 35、progressPct: 60）に直す。
- * 本番の変換（core/storage.ts の fromSaved）は段階2で作るので、テストではここで直接変換する。
+ * テストでは保存する形を通さず、ここで直接メモリの形に変換する（変換そのものは tests/storage.test.ts で確かめる）。
  */
 
 import { schedule } from '../src/core/schedule';
