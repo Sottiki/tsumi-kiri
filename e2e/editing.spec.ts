@@ -84,13 +84,21 @@ test('正しくない値は反映せず、欄を離れると今の値に戻る',
 
 test('入力欄にカーソルがあるときの Ctrl+Z は、ストアを戻さない', async ({ page }) => {
   await openOnMockupDay(page);
-  await page.getByLabel('PJT名').fill('別の名前');
-  await page.getByLabel('PJT名').blur();
+  // 戻されたら分かる変更として、タスクを1件足す。
+  // 欄に文字を打つ変更（PJT名など）は使わない。Chrome の「入力欄の元に戻す」は欄ごとではなく
+  // ページ全体で1つの履歴を持つので、ほかの欄でブラウザが文字を戻し、その変更がストアに入ってしまう
+  await page.getByRole('button', { name: '＋ タスク追加' }).click();
+  await expect(row(page, '1-3')).toContainText('新しいタスク');
 
-  // 工数の欄にカーソルを置いたまま Ctrl+Z を押しても、PJT名は戻らない（ブラウザの入力欄の取り消しに任せる）
+  // 工数の欄にカーソルを置いたまま Ctrl+Z（Mac では ⌘Z）を押しても、追加は戻らない（ブラウザに任せる）
   await effortOf(page).focus();
-  await page.keyboard.press('Control+z');
-  await expect(page.getByLabel('PJT名')).toHaveValue('別の名前');
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(row(page, '1-3')).toContainText('新しいタスク');
+
+  // 欄からカーソルを外せば、Ctrl+Z でストアが戻る
+  await effortOf(page).blur();
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(row(page, '1-3')).toHaveCount(0);
 });
 
 test('PJT名・開始日・エンド日を変えられる', async ({ page }) => {
