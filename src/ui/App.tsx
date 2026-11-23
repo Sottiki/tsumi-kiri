@@ -7,7 +7,7 @@
  *
  * PJTタブ（段階8）と詳細パネル（段階6）は、それぞれの段階で足す。
  *
- * 元に戻す・やり直すのキー（Ctrl+Z・Ctrl+Shift+Z）は、画面全体で受けるので、ここで仕掛ける。
+ * 元に戻す・やり直すのキー（Ctrl+Z・Ctrl+Shift+Z・Ctrl+Y）は、画面全体で受けるので、ここで仕掛ける。
  */
 
 import { Board } from './board/Board';

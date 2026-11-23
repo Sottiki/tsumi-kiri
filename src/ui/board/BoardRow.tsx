@@ -53,7 +53,7 @@ interface BoardRowProps {
   /** 親タスクの開閉を切り替える */
   onToggle: (taskId: string) => void;
   /** タスクの項目を変える（ストアの updateTask） */
-  onUpdateTask: (taskId: string, patch: TaskPatch) => void;
+  onUpdateTask: (taskId: string, patch: TaskPatch, editSession?: string) => void;
   /** 工程の末尾にタスクを足す（ストアの addTaskToPhase） */
   onAddToPhase: (phaseId: PhaseId) => void;
 }
@@ -164,19 +164,21 @@ function TaskCard({ layout, task, highlighted, onToggle, onUpdateTask }: BoardRo
    * 工数の欄に打った文字を反映する（5-1）。
    * 正しい値（0 以上・小数1桁まで）で、今の値と違うときだけ updateTask を呼ぶ。
    * 同じ値で呼ぶと、何も変わらないのに「元に戻す」の履歴が1件増えてしまうため。
+   * 反映したら、新しい値を欄に出す形（'3.5'）で返す。反映しなければ null（DraftInput の決まり）。
+   * editSession は、欄に入ってから離れるまでの入力を、元に戻すの1件にまとめるための目印。
    */
-  const handleEffort = (text: string) => {
+  const handleEffort = (text: string, editSession: string): string | null => {
     const effortTenths = parseEffortInput(text);
-    if (effortTenths !== null && effortTenths !== row.effortTenths) {
-      onUpdateTask(row.key, { effortTenths });
-    }
+    if (effortTenths === null || effortTenths === row.effortTenths) return null;
+    onUpdateTask(row.key, { effortTenths }, editSession);
+    return formatTenths(effortTenths);
   };
   /** 進捗率の欄に打った文字を反映する（5-1）。正しい値（0〜100 の整数）のときだけ */
-  const handleProgress = (text: string) => {
+  const handleProgress = (text: string, editSession: string): string | null => {
     const progressPct = parseProgressInput(text);
-    if (progressPct !== null && progressPct !== row.progressPct) {
-      onUpdateTask(row.key, { progressPct });
-    }
+    if (progressPct === null || progressPct === row.progressPct) return null;
+    onUpdateTask(row.key, { progressPct }, editSession);
+    return String(progressPct);
   };
 
   // 階層を CSS に渡し、字下げとツリー線の位置を CSS の calc で決める（値は tokens.css の indent-step）

@@ -1,12 +1,14 @@
 /**
- * 元に戻す・やり直すのキーの判定（tasks.md 5-5、SPEC 3.1、決定事項58）
+ * 元に戻す・やり直すのキーの判定（tasks.md 5-5、SPEC 3.1、決定事項58・61）
  *
+ * Excel やスプレッドシートと同じキーにする。
  * - Ctrl+Z（Mac は ⌘Z）：元に戻す
  * - Ctrl+Shift+Z（Mac は ⌘⇧Z）：やり直す
+ * - Ctrl+Y（Mac は ⌘Y）：やり直す（Excel で使うキー）
  *
  * キーの組み合わせを見るだけの関数にして、React にも DOM にも依存させない。
  * そのため Vitest でそのまま確かめられる（tests/ui/undoShortcut.test.ts）。
- * 実際にキーを受け取るのは useUndoShortcuts.ts。
+ * 実際にキーを受け取るのは useUndoShortcuts.ts と DraftInput.tsx。
  */
 
 /** 判定に使う、キーボードのイベントの一部（KeyboardEvent の同じ名前の項目） */
@@ -29,6 +31,10 @@ export interface ShortcutKeys {
 export function undoShortcutOf(keys: ShortcutKeys): 'undo' | 'redo' | null {
   const withModifier = keys.ctrlKey || keys.metaKey;
   if (!withModifier || keys.altKey) return null;
-  if (keys.key.toLowerCase() !== 'z') return null;
-  return keys.shiftKey ? 'redo' : 'undo';
+
+  const key = keys.key.toLowerCase();
+  if (key === 'z') return keys.shiftKey ? 'redo' : 'undo';
+  // Ctrl+Y は Shift なしのときだけ（Excel と同じ）
+  if (key === 'y' && !keys.shiftKey) return 'redo';
+  return null;
 }

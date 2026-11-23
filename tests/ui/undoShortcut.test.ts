@@ -1,5 +1,5 @@
 /**
- * ui/undoShortcut.ts のテスト（tasks.md 5-5：元に戻す・やり直すのキー。SPEC 3.1、決定事項58）
+ * ui/undoShortcut.ts のテスト（tasks.md 5-5：元に戻す・やり直すのキー。SPEC 3.1、決定事項58・61）
  */
 import { describe, expect, it } from 'vitest';
 import { undoShortcutOf, type ShortcutKeys } from '../../src/ui/undoShortcut';
@@ -25,10 +25,16 @@ describe('元に戻す・やり直すのキー', () => {
     expect(undoShortcutOf(keys({ key: 'Z', metaKey: true, shiftKey: true }))).toBe('redo');
   });
 
-  it('Ctrl・⌘ なしの Z、Alt つき、ほかのキーは、どちらでもない', () => {
+  it('Ctrl+Y と ⌘Y もやり直す（Excel と同じ）', () => {
+    expect(undoShortcutOf(keys({ key: 'y', ctrlKey: true }))).toBe('redo');
+    expect(undoShortcutOf(keys({ key: 'y', metaKey: true }))).toBe('redo');
+  });
+
+  it('Ctrl・⌘ なしの Z、Alt つき、Ctrl+Shift+Y、ほかのキーは、どちらでもない', () => {
     expect(undoShortcutOf(keys({}))).toBeNull();
     expect(undoShortcutOf(keys({ key: 'Z', shiftKey: true }))).toBeNull();
     expect(undoShortcutOf(keys({ ctrlKey: true, altKey: true }))).toBeNull();
-    expect(undoShortcutOf(keys({ key: 'y', ctrlKey: true }))).toBeNull();
+    expect(undoShortcutOf(keys({ key: 'Y', ctrlKey: true, shiftKey: true }))).toBeNull();
+    expect(undoShortcutOf(keys({ key: 'x', ctrlKey: true }))).toBeNull();
   });
 });

@@ -82,23 +82,78 @@ test('正しくない値は反映せず、欄を離れると今の値に戻る',
   await expect(row(page, '1-2')).toContainText('完了');
 });
 
-test('入力欄にカーソルがあるときの Ctrl+Z は、ストアを戻さない', async ({ page }) => {
+// --- 元に戻す：Excel やスプレッドシートと同じ戻し方（SPEC 3.1、決定事項61） ---
+// キーは ControlOrMeta（Windows・Linux は Ctrl、Mac は ⌘）。手元の Mac でも CI と同じ動きを確かめるため
+
+test('入力の途中で Ctrl+Z を押すと、その欄の入力が丸ごと戻り、カーソルは欄に残る', async ({
+  page,
+}) => {
   await openOnMockupDay(page);
-  // 戻されたら分かる変更として、タスクを1件足す。
-  // 欄に文字を打つ変更（PJT名など）は使わない。Chrome の「入力欄の元に戻す」は欄ごとではなく
-  // ページ全体で1つの履歴を持つので、ほかの欄でブラウザが文字を戻し、その変更がストアに入ってしまう
+  const effort = effortOf(page);
+
+  // 「1」「1.」「1.5」と1文字ずつ打つ（「1」と「1.5」の2回、ストアに反映される）
+  await effort.selectText();
+  await page.keyboard.type('1.5');
+  await expect(summary(page)).toContainText('32.0人日');
+
+  // 1回の Ctrl+Z で、打つ前の 3.0 まで戻る。カーソルは工数の欄のまま
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(effort).toHaveValue('3.0');
+  await expect(summary(page)).toContainText('33.5人日');
+  await expect(effort).toBeFocused();
+
+  // やり直すは Ctrl+Shift+Z と Ctrl+Y のどちらでもできる
+  await page.keyboard.press('ControlOrMeta+Shift+z');
+  await expect(effort).toHaveValue('1.5');
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(effort).toHaveValue('3.0');
+  await page.keyboard.press('ControlOrMeta+y');
+  await expect(effort).toHaveValue('1.5');
+});
+
+test('ゆっくり打っても、欄を離れるまでの入力は1件で戻る', async ({ page }) => {
+  await openOnMockupDay(page);
+  const effort = effortOf(page);
+
+  await effort.selectText();
+  await page.keyboard.type('2');
+  await page.waitForTimeout(1200); // 1秒より長く空ける
+  await page.keyboard.type('.5');
+  await expect(effort).toHaveValue('2.5');
+  await effort.blur();
+
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(effort).toHaveValue('3.0');
+});
+
+test('何も打っていない欄で Ctrl+Z を押すと、アプリの履歴の1つ前の変更が戻る', async ({ page }) => {
+  await openOnMockupDay(page);
+  const name = page.getByLabel('PJT名');
+  await name.fill('別の名前');
+  await name.blur();
+
+  // 工数の欄にカーソルを置いて Ctrl+Z：PJT名の変更が戻る
+  await effortOf(page).focus();
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(name).toHaveValue('社内ポータル刷新');
+
+  // アプリの履歴で戻したので、やり直せる。
+  // （ブラウザの「入力欄の元に戻す」で文字が戻ったのなら、それは新しい変更なので、やり直せない）
+  await page.keyboard.press('ControlOrMeta+Shift+z');
+  await expect(name).toHaveValue('別の名前');
+});
+
+test('正しくない文字だけを打った欄の Ctrl+Z は、その文字だけを捨てる', async ({ page }) => {
+  await openOnMockupDay(page);
   await page.getByRole('button', { name: '＋ タスク追加' }).click();
   await expect(row(page, '1-3')).toContainText('新しいタスク');
 
-  // 工数の欄にカーソルを置いたまま Ctrl+Z（Mac では ⌘Z）を押しても、追加は戻らない（ブラウザに任せる）
-  await effortOf(page).focus();
+  // 「1.25」は反映しない。この欄ではまだ何も反映していない
+  await effortOf(page).fill('1.25');
   await page.keyboard.press('ControlOrMeta+z');
+  // 打ちかけの文字だけが消える。ひとつ前の変更（タスクの追加）は戻らない
+  await expect(effortOf(page)).toHaveValue('3.0');
   await expect(row(page, '1-3')).toContainText('新しいタスク');
-
-  // 欄からカーソルを外せば、Ctrl+Z でストアが戻る
-  await effortOf(page).blur();
-  await page.keyboard.press('ControlOrMeta+z');
-  await expect(row(page, '1-3')).toHaveCount(0);
 });
 
 test('PJT名・開始日・エンド日を変えられる', async ({ page }) => {

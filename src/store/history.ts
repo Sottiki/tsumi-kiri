@@ -2,7 +2,6 @@
  * 元に戻す・やり直すの履歴（tasks.md 3-3、architecture.md 6章、SPEC 3.1）
  *
  * React にも Zustand にも依存しない、ただの関数だけを置く。ストア（appStore.ts）から使う。
- * 単体でテストできるよう、「今の時刻」も引数で受け取る。
  *
  * ■ しくみ
  * 変更のたびに「変更する前の AppData」を past に積む。
@@ -19,65 +18,48 @@ import type { AppData } from '../core/types';
 /** 履歴に残す最大の件数（tasks.md 3-3） */
 export const HISTORY_LIMIT = 100;
 
-/**
- * 同じ欄への続けての入力を1件にまとめる時間（ミリ秒。tasks.md 3-3）。
- * 前の入力からこの時間以内に、同じ欄へまた入力したら、新しい履歴を積まない。
- * 工数を「3」「3.」「3.5」と打ったときに、1文字ずつ戻らないようにするため。
- */
-export const MERGE_WINDOW_MS = 1000;
-
 export interface History {
   /** 戻せる版。古い順に並び、最後が一番新しい */
   readonly past: readonly AppData[];
   /** やり直せる版。最後が、次にやり直す版 */
   readonly future: readonly AppData[];
-  /** 前の変更の「まとめるための目印」（例：'task:abc:effortTenths'）。まとめない変更なら null */
+  /** 前の変更の「まとめるための目印」（例：'edit:3'）。まとめない変更なら null */
   readonly lastMergeKey: string | null;
-  /** 前の変更の時刻（ミリ秒） */
-  readonly lastChangedAt: number;
 }
 
 /** 空の履歴 */
 export function emptyHistory(): History {
-  return { past: [], future: [], lastMergeKey: null, lastChangedAt: 0 };
+  return { past: [], future: [], lastMergeKey: null };
 }
 
 /**
  * 変更を履歴に記録する。
  *
  * @param before 変更する前のデータ（これを past に積む）
- * @param mergeKey 同じ欄への入力をまとめるための目印。まとめない変更（削除・追加など）は null
- * @param now 今の時刻（ミリ秒）
+ * @param mergeKey 1件にまとめるための目印。まとめない変更（削除・追加など）は null
  *
- * まとめるのは、次の3つがそろったとき：
- * - mergeKey が null ではない
- * - 前の変更と mergeKey が同じ（同じタスクの同じ欄）
- * - 前の変更から MERGE_WINDOW_MS 以内
+ * ■ まとめ方（SPEC 3.1、決定事項61：Excel やスプレッドシートにそろえる）
+ * 1つの欄に入ってから離れるまでの入力（編集の1回）を、1件にまとめる。
+ * 工数を「3」「3.」「3.5」と打ったときに、1文字ずつ戻らないようにするため。
+ * 画面の入力欄は、カーソルが入るたびに新しい目印を作って渡してくる（ui/DraftInput.tsx）。
+ *
+ * まとめるのは、mergeKey が null ではなく、前の変更と同じとき。時間は見ない（ゆっくり打っても1件）。
+ * 間にほかの変更（タスクの追加など。目印は null）が入れば、前の目印は消えるので、そこで区切れる。
  * まとめるときは past に積まない。past の最後には「入力を始める前の版」が残っているので、
- * 元に戻すと、続けて打った入力がまとめて戻る。
- *
- * 続けて打っている間は前の変更の時刻が更新されていくので、
- * 1秒より短い間隔で打ち続けるかぎり、全体で1秒を超えても1件にまとまる。
+ * 元に戻すと、その欄の入力がまとめて戻る。
  */
-export function recordChange(
-  history: History,
-  before: AppData,
-  mergeKey: string | null,
-  now: number,
-): History {
-  const canMerge =
-    mergeKey !== null &&
-    mergeKey === history.lastMergeKey &&
-    now - history.lastChangedAt <= MERGE_WINDOW_MS;
+export function recordChange(history: History, before: AppData, mergeKey: string | null): History {
+  const canMerge = mergeKey !== null && mergeKey === history.lastMergeKey;
 
   if (canMerge) {
-    return { ...history, future: [], lastChangedAt: now };
+    // やり直せる版は、新しい入力をしたので捨てる
+    return { ...history, future: [] };
   }
 
   // 上限を超えたら、一番古い版から捨てる
   const past = [...history.past, before];
   if (past.length > HISTORY_LIMIT) past.splice(0, past.length - HISTORY_LIMIT);
-  return { past, future: [], lastMergeKey: mergeKey, lastChangedAt: now };
+  return { past, future: [], lastMergeKey: mergeKey };
 }
 
 /** 元に戻した・やり直した結果 */
@@ -95,9 +77,9 @@ export function undo(history: History, current: AppData): HistoryStep | null {
     history: {
       past: history.past.slice(0, -1),
       future: [...history.future, current],
-      // 戻した直後の入力は、戻す前の入力とまとめない
+      // 戻した直後の入力は、戻す前の入力とまとめない。
+      // 同じ欄で打ち続けても、戻した後の入力は新しい1件になる（でないと、戻せなくなる）
       lastMergeKey: null,
-      lastChangedAt: 0,
     },
     data: keepViewState(target, current),
   };
@@ -112,7 +94,6 @@ export function redo(history: History, current: AppData): HistoryStep | null {
       past: [...history.past, current],
       future: history.future.slice(0, -1),
       lastMergeKey: null,
-      lastChangedAt: 0,
     },
     data: keepViewState(target, current),
   };

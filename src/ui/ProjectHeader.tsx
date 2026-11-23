@@ -9,7 +9,7 @@
  * - PJT名：空（空白だけ）は反映しない（決定事項59）
  * - 開始日：2026〜2050年の日付だけ反映する。空にはできない（日程を積む起点なので）
  * - エンド日：2026〜2050年の日付か、空欄（エンド日未設定、SPEC 3.1）を反映する（決定事項60）
- * 続けて打った入力は、ストアの履歴で1件にまとまる（1秒以内の同じ欄。store/history.ts）。
+ * 欄に入ってから離れるまでの入力は、元に戻すの履歴で1件にまとまる（決定事項61。store/history.ts）。
  *
  * ■ ボタン
  * - 「Excel出力」は表示中のPJTを .xlsx でダウンロードする（段階9B）
@@ -42,21 +42,29 @@ export function ProjectHeader() {
   const project = useAppStore(selectActiveProject);
   const updateProject = useAppStore((state) => state.actions.updateProject);
 
-  const handleName = (text: string) => {
+  // 欄に打った文字を反映する。反映したら新しい値を欄に出す形で返し、反映しなければ null を返す
+  // （DraftInput の決まり）。editSession は、欄に入ってから離れるまでを元に戻すの1件にまとめる目印
+  const handleName = (text: string, editSession: string): string | null => {
     const name = parseProjectName(text);
-    if (name !== null && name !== project.name) updateProject({ name });
+    if (name === null || name === project.name) return null;
+    updateProject({ name }, editSession);
+    return name;
   };
 
-  const handleStart = (text: string) => {
+  const handleStart = (text: string, editSession: string): string | null => {
     const start = parseDateInput(text);
-    if (start !== null && start !== project.start) updateProject({ start });
+    if (start === null || start === project.start) return null;
+    updateProject({ start }, editSession);
+    return start;
   };
 
-  const handleEnd = (text: string) => {
+  const handleEnd = (text: string, editSession: string): string | null => {
     // 欄を空にしたら、エンド日を空欄（null）にする。それ以外は、正しい日付のときだけ反映する
     const end = text === '' ? null : parseDateInput(text);
-    if (text !== '' && end === null) return;
-    if (end !== project.end) updateProject({ end });
+    if (text !== '' && end === null) return null;
+    if (end === project.end) return null;
+    updateProject({ end }, editSession);
+    return end ?? ''; // 空欄は、欄では '' で出す
   };
 
   /**

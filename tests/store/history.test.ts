@@ -8,7 +8,6 @@ import {
   emptyHistory,
   HISTORY_LIMIT,
   keepViewState,
-  MERGE_WINDOW_MS,
   recordChange,
   redo,
   undo,
@@ -28,8 +27,8 @@ const nameOf = (d: AppData) => d.projects[0]!.name;
 describe('記録と、元に戻す・やり直す', () => {
   it('戻すと前の版に、やり直すと戻す前の版になる', () => {
     let h = emptyHistory();
-    h = recordChange(h, version('v1'), null, 0); // v1 → v2
-    h = recordChange(h, version('v2'), null, 5000); // v2 → v3
+    h = recordChange(h, version('v1'), null); // v1 → v2
+    h = recordChange(h, version('v2'), null); // v2 → v3
 
     const back = undo(h, version('v3'))!;
     expect(nameOf(back.data)).toBe('v2');
@@ -42,9 +41,9 @@ describe('記録と、元に戻す・やり直す', () => {
   });
 
   it('戻した後に新しい変更をすると、やり直しの版は捨てる', () => {
-    let h = recordChange(emptyHistory(), version('v1'), null, 0);
+    let h = recordChange(emptyHistory(), version('v1'), null);
     const back = undo(h, version('v2'))!;
-    h = recordChange(back.history, back.data, null, 5000);
+    h = recordChange(back.history, back.data, null);
     expect(h.future).toEqual([]);
     expect(redo(h, version('v3'))).toBeNull();
   });
@@ -52,46 +51,47 @@ describe('記録と、元に戻す・やり直す', () => {
   it(`上限は ${HISTORY_LIMIT} 件。超えたら古い版から捨てる`, () => {
     let h = emptyHistory();
     for (let i = 0; i < HISTORY_LIMIT + 5; i++) {
-      h = recordChange(h, version(`v${i}`), null, i * 5000);
+      h = recordChange(h, version(`v${i}`), null);
     }
     expect(h.past).toHaveLength(HISTORY_LIMIT);
     expect(nameOf(h.past[0]!)).toBe('v5');
   });
 });
 
-describe('同じ欄への続けての入力をまとめる', () => {
-  const key = 'task:a:effortTenths';
+describe('欄に入ってから離れるまでの入力をまとめる（決定事項61）', () => {
+  // 入力欄が、カーソルが入るたびに作る目印（ui/DraftInput.tsx → ストアの mergeKeyOf）
+  const key = 'edit:1';
 
-  it(`同じ欄に ${MERGE_WINDOW_MS}ms 以内に続けて入力したら、1件にまとめる`, () => {
+  it('同じ目印の変更は、時間が空いても1件にまとめる', () => {
     let h = emptyHistory();
-    h = recordChange(h, version('入力前'), key, 0);
-    h = recordChange(h, version('3'), key, 400);
-    h = recordChange(h, version('3.'), key, 800);
-    // 前の入力から 1 秒以内なら、全体で 1 秒を超えても続けてまとめる
-    h = recordChange(h, version('3.5'), key, 1700);
+    h = recordChange(h, version('入力前'), key);
+    h = recordChange(h, version('3'), key);
+    h = recordChange(h, version('3.'), key);
+    h = recordChange(h, version('3.5'), key);
     expect(h.past).toHaveLength(1);
     // 戻すと、入力を始める前の版に一度で戻る
     expect(nameOf(undo(h, version('最後'))!.data)).toBe('入力前');
   });
 
-  it('1 秒より空いたら、別の1件にする', () => {
-    let h = recordChange(emptyHistory(), version('v1'), key, 0);
-    h = recordChange(h, version('v2'), key, MERGE_WINDOW_MS + 1);
-    expect(h.past).toHaveLength(2);
-  });
-
-  it('別の欄・まとめない変更（null）は、別の1件にする', () => {
-    let h = recordChange(emptyHistory(), version('v1'), key, 0);
-    h = recordChange(h, version('v2'), 'task:a:progressPct', 100);
-    h = recordChange(h, version('v3'), null, 200);
-    h = recordChange(h, version('v4'), null, 300);
+  it('別の目印（欄に入り直した）・まとめない変更（null）は、別の1件にする', () => {
+    let h = recordChange(emptyHistory(), version('v1'), key);
+    h = recordChange(h, version('v2'), 'edit:2');
+    h = recordChange(h, version('v3'), null);
+    h = recordChange(h, version('v4'), null);
     expect(h.past).toHaveLength(4);
   });
 
-  it('戻した直後の入力は、戻す前の入力とまとめない', () => {
-    let h = recordChange(emptyHistory(), version('v1'), key, 0);
+  it('間にまとめない変更が入ったら、同じ目印でも別の1件にする', () => {
+    let h = recordChange(emptyHistory(), version('v1'), key);
+    h = recordChange(h, version('v2'), null);
+    h = recordChange(h, version('v3'), key);
+    expect(h.past).toHaveLength(3);
+  });
+
+  it('戻した直後の入力は、同じ目印でも、戻す前の入力とまとめない', () => {
+    let h = recordChange(emptyHistory(), version('v1'), key);
     const back = undo(h, version('v2'))!;
-    h = recordChange(back.history, back.data, key, 100);
+    h = recordChange(back.history, back.data, key);
     expect(h.past).toHaveLength(1);
     expect(nameOf(h.past[0]!)).toBe('v1');
   });
