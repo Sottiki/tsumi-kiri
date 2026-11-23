@@ -53,6 +53,10 @@ src/
     ProjectHeader.tsx・SummaryCards.tsx・Toolbar.tsx   ヘッダ、上部のカード、操作の列
     controls.module.css  ボタン・入力欄の共通の見た目
     format.ts        数値の書式（工数 3.5、進捗の整数%）
+    parse.ts         入力欄の文字の読み取り（format.ts の逆。正しい値だけを受ける。SPEC 3.1）
+    DraftInput.tsx   打っている途中の文字を手元に持つ入力欄。正しい値になったときだけストアに反映する
+    undoShortcut.ts  元に戻す・やり直すのキーの判定（React に依存しない）
+    useUndoShortcuts.ts  そのキーを画面全体で受け取り、ストアの undo・redo を呼ぶ
     icons.tsx        線のアイコン（開閉・炎・メモ）
     download.ts      Blob をファイル名つきでダウンロードさせる（Excel出力。段階8のバックアップでも使う）
     board/           タスク表とガント
@@ -64,6 +68,7 @@ src/
 tests/             core と excel のテスト（docs/test-cases.md の例を元にする）。ui/ の React に依存しない関数のテストも置く
   helpers.ts       テストのデータを人の読む形（工数 3.5・進捗 60%）で短く作るための関数
 e2e/               画面のテスト（Playwright Test）
+  helpers.ts       時計を画面案の日（2026-11-19）に止めて開く関数など
 ```
 
 - 依存の向きは `ui → store → core`、`excel → core` の一方向にする。core は React も DOM も使わない
@@ -213,7 +218,8 @@ JavaScript の数値は2進数の小数なので、`0.1 + 0.2` は `0.3000000000
 - ファイルの分け方：`store/history.ts`（履歴。React に依存しない関数）、`store/persistence.ts`（保存）、`store/appStore.ts`（ストア本体）、`store/derived.ts`（計算結果とハイライト）、`store/index.ts`（画面で使うストア）
 - データは必ずストアの `actions` を通して変える。`actions` は core の関数（tree.ts・appData.ts）で新しいデータを作り、履歴に残す変更（`change`）か残さない変更（`switchView`）として入れる。どちらも最後に、計算結果・ハイライト・表示の状態をまとめて更新する
 - ハイライトするのは、日程（開始日・終了日）が変わったタスクの行だけ。工程の行と、新しく足したタスクは対象にしない。1.5秒後にストアが消し、0.8秒かけて戻す動き（DESIGN.md の Motion）は画面で付ける
-- 入力欄にカーソルがあるときの Ctrl+Z は、ブラウザ標準の「入力欄の元に戻す」に任せる
+- 入力欄にカーソルがあるときの Ctrl+Z は、ブラウザ標準の「入力欄の元に戻す」に任せる。Mac の ⌘Z も同じに扱う（SPEC 3.1）
+- 入力欄（一覧の工数・進捗率、ヘッダのPJT名・日付）は、打っている途中の文字を `ui/DraftInput.tsx` の中に持つ。正しい値（`ui/parse.ts`）になったときだけストアに反映し、欄を離れたらストアの値の表示に戻す。今の値と同じなら反映しない（何も変わらない履歴を積まないため）
 
 ## 7. 保存
 
