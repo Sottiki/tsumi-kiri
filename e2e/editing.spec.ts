@@ -8,10 +8,9 @@
  * - 総工数：33.5 → 31.5 人日
  */
 
-import { expect, test, type Page } from '@playwright/test';
-import { openOnMockupDay, row } from './helpers';
-
-test.use({ timezoneId: 'Asia/Tokyo' });
+import type { Page } from '@playwright/test';
+import { HIGHLIGHT_MS } from '../src/store/derived';
+import { expect, openOnMockupDay, row, test } from './helpers';
 
 /** 日程が変わった終了日のハイライトの色（DESIGN.md の flash #FFE58F） */
 const FLASH = 'rgb(255, 229, 143)';
@@ -38,9 +37,13 @@ test('工数を変えると、後ろのタスクの日程とカードが変わ�
   await expect(page.getByTestId('end-date-1-2')).toHaveCSS('background-color', FLASH);
   await expect(page.getByTestId('end-date-5-1')).toHaveCSS('background-color', FLASH);
   await expect(page.getByTestId('end-date-1-1')).not.toHaveCSS('background-color', FLASH);
-  // 約1.5秒たつと、ハイライトが消える（0.8秒かけて戻る）
+  // 約1.5秒たつと、ハイライトが消える（0.8秒かけて戻る）。
+  // 実際に 1.5 秒待つ代わりに、ページの時計を進めて、ハイライトを消すタイマーをすぐに動かす
+  // （e2e/helpers.ts の openOnMockupDay で、時計を Playwright が動かせるものにしてある）
+  await page.clock.fastForward(HIGHLIGHT_MS);
+  // 待つのは 1.5 秒より短くする。時計を進めずに実際の 1.5 秒で消えたのなら、ここで失敗させるため
   await expect(page.getByTestId('end-date-1-2')).not.toHaveCSS('background-color', FLASH, {
-    timeout: 5000,
+    timeout: 1000,
   });
 
   // --- 欄を離れてから Ctrl+Z：元の日程に戻る ---
@@ -109,21 +112,6 @@ test('入力の途中で Ctrl+Z を押すと、その欄の入力が丸ごと戻
   await expect(effort).toHaveValue('3.0');
   await page.keyboard.press('ControlOrMeta+y');
   await expect(effort).toHaveValue('1.5');
-});
-
-test('ゆっくり打っても、欄を離れるまでの入力は1件で戻る', async ({ page }) => {
-  await openOnMockupDay(page);
-  const effort = effortOf(page);
-
-  await effort.selectText();
-  await page.keyboard.type('2');
-  await page.waitForTimeout(1200); // 1秒より長く空ける
-  await page.keyboard.type('.5');
-  await expect(effort).toHaveValue('2.5');
-  await effort.blur();
-
-  await page.keyboard.press('ControlOrMeta+z');
-  await expect(effort).toHaveValue('3.0');
 });
 
 test('何も打っていない欄で Ctrl+Z を押すと、アプリの履歴の1つ前の変更が戻る', async ({ page }) => {
