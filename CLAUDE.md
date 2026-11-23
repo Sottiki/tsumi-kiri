@@ -2,7 +2,9 @@
 
 Tsumikiri（工数ガント）は、工数を入力するとPJTの日程とガントを自動で組み直す個人用のWebアプリ。何を作るかは SPEC.md に書いてある。
 
+## コミュニケーション
 
+基本的に日本語を使用すること
 
 ## **コミットメッセージ**
 
@@ -22,19 +24,19 @@ Tsumikiri（工数ガント）は、工数を入力するとPJTの日程とガ�
 ## ドキュメント
 
 
-| ファイル                 | 役割                     | 状態  |
-| -------------------- | ---------------------- | --- |
-| `SPEC.md`            | 何を作るか（仕様）。**これを正とする**  | あり  |
-| `DESIGN.md`          | どう見せるか（色・文字・寸法・部品のトークンとルール） | 確定 |
-| `docs/architecture.md` | どう作るか（技術構成・モジュール・データの流れ） | 確定 |
-| `docs/test-cases.md` | 日程計算の入力と期待する結果         | 確定 |
-| `docs/tasks.md`      | タスク管理。実装の段階と完了条件、チェックボックスのタスク一覧 | 確定 |
+| ファイル                   | 役割                              | 状態  |
+| ---------------------- | ------------------------------- | --- |
+| `SPEC.md`              | 何を作るか（仕様）。**これを正とする**           | あり  |
+| `DESIGN.md`            | どう見せるか（色・文字・寸法・部品のトークンとルール）     | 確定  |
+| `docs/architecture.md` | どう作るか（技術構成・モジュール・データの流れ）        | 確定  |
+| `docs/test-cases.md`   | 日程計算の入力と期待する結果                  | 確定  |
+| `docs/tasks.md`        | タスク管理。実装の段階と完了条件、チェックボックスのタスク一覧 | 確定  |
 
 
 画面案（デザインキャンバス）は SPEC.md の冒頭にリンクがある。非公開のため、リポジトリを見た人は開けない。
 
 - UI を変えるときは DESIGN.md に従う。色・文字・角丸・余白・部品は DESIGN.md のトークンを使い、新しい値を勝手に作らない。新しい値が必要なら、先に DESIGN.md への追加をユーザーに確認する
-- DESIGN.md は Google の DESIGN.md 形式（https://github.com/google-labs-code/design.md ）で書く。章の見出しは仕様の英語名を使い、本文は日本語で書く
+- DESIGN.md は Google の DESIGN.md 形式（[https://github.com/google-labs-code/design.md](https://github.com/google-labs-code/design.md) ）で書く。章の見出しは仕様の英語名を使い、本文は日本語で書く
 
 ## 進め方（ドキュメント駆動）
 
@@ -80,17 +82,19 @@ Playwright MCP（画面の確認に使う）は、さらに次を守る。
 
 Node.js は 26系（`.nvmrc`、Volta で固定）。
 
-| コマンド | 内容 |
-|---|---|
-| `npm install` | 依存パッケージを入れる |
-| `npm run dev` | 開発サーバー（http://localhost:5173 ） |
-| `npm test` | テスト（Vitest。`tests/**/*.test.ts`） |
-| `npm run test:watch` | テストを変更のたびに流す |
-| `npm run test:e2e` | 画面のテスト（Playwright Test。`e2e/**/*.spec.ts`）。先にビルドする。初回は `npx playwright install chromium` が必要 |
-| `npm run lint` | ESLint と Prettier の確認 |
-| `npm run format` | Prettier で整形する |
-| `npm run build` | 型の確認と、1つの HTML（`dist/index.html`）へのビルド |
-| `npm run preview` | ビルド結果を開く |
+
+| コマンド                 | 内容                                                                                           |
+| -------------------- | -------------------------------------------------------------------------------------------- |
+| `npm install`        | 依存パッケージを入れる                                                                                  |
+| `npm run dev`        | 開発サーバー（[http://localhost:5173](http://localhost:5173) ）                                      |
+| `npm test`           | テスト（Vitest。`tests/**/*.test.ts`）                                                             |
+| `npm run test:watch` | テストを変更のたびに流す                                                                                 |
+| `npm run test:e2e`   | 画面のテスト（Playwright Test。`e2e/**/*.spec.ts`）。先にビルドする。初回は `npx playwright install chromium` が必要 |
+| `npm run lint`       | ESLint と Prettier の確認                                                                        |
+| `npm run format`     | Prettier で整形する                                                                               |
+| `npm run build`      | 型の確認と、1つの HTML（`dist/index.html`）へのビルド                                                       |
+| `npm run preview`    | ビルド結果を開く                                                                                     |
+
 
 - CI（`.github/workflows/ci.yml`）は、PR と `main` への push で lint・テスト・ビルド・画面のテストを行う
 - `src/ui/tokens.css` は DESIGN.md のトークンを書き写したもの。DESIGN.md を変えたら、こちらも合わせる
