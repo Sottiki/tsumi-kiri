@@ -63,3 +63,11 @@
   font-weight: var(--typography-label-md-font-weight);
   color: var(--color-on-surface-sub);
 }
+
+/* button-danger：白地に赤文字、枠は error-border（詳細パネルの「削除」、確認ダイアログの「削除」） */
+.danger {
+  composes: button;
+  background: var(--color-surface);
+  color: var(--color-error);
+  border-color: var(--color-error-border);
+}

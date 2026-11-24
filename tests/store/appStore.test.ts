@@ -263,6 +263,15 @@ describe('詳細パネル', () => {
     expect(store.getState().view.openTaskId).toBeNull();
   });
 
+  it('子タスクを足すと、足した子を詳細パネルで開く（決定事項69）', () => {
+    const store = makeStore();
+    const { actions } = store.getState();
+    const parent = taskAt(store, 1, 1); // 詳細設計（末端）
+    const child = actions.addChildTask(parent.id);
+    expect(child).not.toBeNull();
+    expect(store.getState().view.openTaskId).toBe(child);
+  });
+
   it('孫には子タスクを足せない', () => {
     const store = makeStore();
     const { actions } = store.getState();

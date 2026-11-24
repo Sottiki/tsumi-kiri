@@ -13,11 +13,11 @@
  *
  * ここでは、ストアから読んだ値を行ごとに配るだけで、計算は core とストアに任せる。
  *
- * ■ 開いたタスクの行までスクロールする（5-4）
- * 「＋タスク追加」で足したタスクは、ストアが「開いているタスク」にする（SPEC 3.1）。
- * 工程の末尾に入るので、枠の外に隠れていることがある。そこで、開いているタスクが変わったら、
- * その行が見えるところまで縦にスクロールする。
- * 段階6（6-2）で、詳細パネルに隠れない範囲の中央へ、横も合わせてスクロールする形にする。
+ * ■ 開いたタスクのバーまでスクロールする（6-2、SPEC 3.2、決定事項71）
+ * 開いているタスクが変わったら（カードを押した・前後へ移った・＋タスク追加で足した）、
+ * そのタスクのバーが、詳細パネルに隠れない範囲の中央に来るよう、横と縦にスクロールする。
+ * パネルで値を変えただけ（開いているタスクは同じ）のときは動かさない。
+ * 寸法を測るのはここ（DOM）、どこへスクロールするかの計算は scrollToBar.ts（純粋な関数）で行う。
  */
 
 import { useEffect, useMemo, useRef } from 'react';
@@ -26,9 +26,11 @@ import { useAppStore } from '../../store';
 import { displayedHoursPerDay, displayedRows } from '../../store/derived';
 import { localToday } from '../../store/appStore';
 import type { Project, Task } from '../../core/types';
+import { cx } from '../cx';
 import { BoardHeader } from './BoardHeader';
 import { BoardRow } from './BoardRow';
 import { layoutRows } from './rowLayout';
+import { scrollTargetForBar } from './scrollToBar';
 import styles from './Board.module.css';
 
 /**
@@ -58,18 +60,19 @@ export function Board() {
   const toggleCollapsed = useAppStore((state) => state.actions.toggleCollapsed);
   const updateTask = useAppStore((state) => state.actions.updateTask);
   const addTaskToPhase = useAppStore((state) => state.actions.addTaskToPhase);
+  const openTask = useAppStore((state) => state.actions.openTask);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
 
-  // 開いているタスクが変わったら、その行が見えるまで縦にスクロールする。
-  // useEffect は描き終わった後に動くので、足したばかりの行も、もう画面にある
+  // 開いているタスクが変わったら、そのバーが詳細パネルに隠れない範囲の中央に来るようスクロールする。
+  // useEffect は描き終わった後に動くので、足したばかりの行も、開いたばかりのパネルも、もう画面にある
   useEffect(() => {
     const scroll = scrollRef.current;
     if (openTaskId === null || scroll === null) return;
     const rowElement = scroll.querySelector<HTMLElement>(`[data-row-key="${openTaskId}"]`);
-    if (rowElement === null) return;
-    scrollRowIntoView(scroll, rowElement, headerRef.current?.offsetHeight ?? 0);
+    if (rowElement === null) return; // たたんで隠れている行は、スクロールしない
+    scrollToOpenBar(scroll, rowElement, headerRef.current);
   }, [openTaskId]);
 
   // 表示中のモード（通常／残業）の行と、その1日の稼働時間
@@ -91,7 +94,11 @@ export function Board() {
   return (
     <section className={styles.board} aria-label="タスク表とガント">
       <div className={styles.scroll} data-testid="board-scroll" ref={scrollRef}>
-        <div className={styles.content}>
+        {/*
+          パネルを開いている間は、中身の右にパネルの分の余白を足す（.contentWithPanel）。
+          ガントの終わり近くのバー（完了予定の日など）も、パネルに隠れない所までスクロールできるように
+        */}
+        <div className={cx(styles.content, openTaskId !== null && styles.contentWithPanel)}>
           <BoardHeader ref={headerRef} days={computed.days} today={today} endDate={project.end} />
           {layouts.map((layout) =>
             layout.hidden ? null : (
@@ -105,6 +112,8 @@ export function Board() {
                 endDate={project.end}
                 otherModeFinish={otherModeFinish}
                 highlighted={highlightKeys.has(layout.row.key)}
+                isOpen={openTaskId === layout.row.key}
+                onOpen={openTask}
                 onToggle={toggleCollapsed}
                 onUpdateTask={updateTask}
                 onAddToPhase={addTaskToPhase}
@@ -118,32 +127,66 @@ export function Board() {
 }
 
 /**
- * 行が、スクロールの枠の中で見えるように、縦だけをスクロールする。
+ * 開いたタスクのバーが、詳細パネルに隠れない範囲の中央に来るようスクロールする（6-2）。
  *
- * ブラウザの scrollIntoView を使わないのは、横にもスクロールしてしまうため
- * （行は日付のマスの分だけ横に長いので、左端に戻されてしまう）。
- * 上には見出し（月・曜日・日付）が固定されて重なるので、その高さの分だけ下にずらして考える。
+ * ここでは寸法を測るだけで、どこへスクロールするかは scrollTargetForBar（scrollToBar.ts）で決める。
+ * 測った位置は、すべて「枠の中身の左上からの距離」に直して渡す。
+ * getBoundingClientRect は画面の左上からの位置なので、枠の左上（枠線の内側）を引き、
+ * 今スクロールしている分を足すと、中身の中での位置になる。
  *
- * @param headerHeight 上に固定されている見出しの高さ（px）
+ * ブラウザの scrollIntoView を使わないのは、左に固定したタスク表・上に固定した見出し・
+ * 右に浮かぶ詳細パネルに隠れる分を考えてくれないため。
+ *
+ * @param header 上に固定している見出しの行。高さを、上に隠れる分として使う
  */
-function scrollRowIntoView(scroll: HTMLElement, rowElement: HTMLElement, headerHeight: number) {
-  // 行の位置を「枠の中身の一番上から何 px か」に直す。
-  // getBoundingClientRect は画面の上からの位置なので、枠の上端（枠線の内側）を引き、
-  // 今スクロールしている分を足す
+function scrollToOpenBar(scroll: HTMLElement, rowElement: HTMLElement, header: HTMLElement | null) {
   const scrollRect = scroll.getBoundingClientRect();
+  /** 画面の上の x を、枠の中身の中での x に直す */
+  const toContentX = (x: number) => x - scrollRect.left - scroll.clientLeft + scroll.scrollLeft;
+  /** 画面の上の y を、枠の中身の中での y に直す */
+  const toContentY = (y: number) => y - scrollRect.top - scroll.clientTop + scroll.scrollTop;
+
+  // バーの左端と右端：バーのあるマス（data-bar）の最初と最後
+  const barCells = rowElement.querySelectorAll<HTMLElement>('[data-bar]');
+  const firstCell = barCells[0];
+  const lastCell = barCells[barCells.length - 1];
+  const bar =
+    firstCell !== undefined && lastCell !== undefined
+      ? {
+          left: toContentX(firstCell.getBoundingClientRect().left),
+          right: toContentX(lastCell.getBoundingClientRect().right),
+        }
+      : null;
+
+  // 左に固定しているタスク表の幅（行の左側の部品の幅）
+  const stickyLeft = rowElement.firstElementChild?.getBoundingClientRect().width ?? 0;
+
+  // 詳細パネルが、枠の右側をどれだけ隠しているか。
+  // 枠の中身の右端（スクロールバーを除く）から、パネルの左端までの幅
+  const panel = document.querySelector<HTMLElement>('[data-detail-panel]');
+  const viewportRight = scrollRect.left + scroll.clientLeft + scroll.clientWidth;
+  const hiddenRight =
+    panel === null ? 0 : Math.max(0, viewportRight - panel.getBoundingClientRect().left);
+
   const rowRect = rowElement.getBoundingClientRect();
-  const rowTop = rowRect.top - scrollRect.top - scroll.clientTop + scroll.scrollTop;
-  const rowBottom = rowTop + rowRect.height;
+  const target = scrollTargetForBar({
+    viewportWidth: scroll.clientWidth,
+    viewportHeight: scroll.clientHeight,
+    contentWidth: scroll.scrollWidth,
+    contentHeight: scroll.scrollHeight,
+    stickyLeft,
+    stickyTop: header?.offsetHeight ?? 0,
+    hiddenRight,
+    bar,
+    rowTop: toContentY(rowRect.top),
+    rowHeight: rowRect.height,
+  });
 
-  // 今見えている範囲（上は、見出しに隠れている分を除く）
-  const visibleTop = scroll.scrollTop + headerHeight;
-  const visibleBottom = scroll.scrollTop + scroll.clientHeight;
-
-  if (rowTop < visibleTop) {
-    // 上に隠れている：行の上端が見出しのすぐ下に来るようにする
-    scroll.scrollTop = rowTop - headerHeight;
-  } else if (rowBottom > visibleBottom) {
-    // 下に隠れている：行の下端が枠の下端に来るようにする
-    scroll.scrollTop = rowBottom - scroll.clientHeight;
-  }
+  // なめらかにスクロールする。OS で「視差効果を減らす」が有効なら、すぐに移る（DESIGN.md の Motion）
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  scroll.scrollTo({
+    ...(target.left === null ? {} : { left: target.left }),
+    top: target.top,
+    behavior: reduceMotion ? 'auto' : 'smooth',
+  });
 }

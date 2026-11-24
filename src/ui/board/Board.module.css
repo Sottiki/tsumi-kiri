@@ -31,6 +31,14 @@
   min-width: 100%;
 }
 
+/*
+ * 詳細パネルを開いている間（6-2）：中身の右に、パネルが重なる幅（パネルの幅＋左右の 16px）の余白を足す。
+ * 余白がないと、ガントの終わり近くのバーは、右へスクロールしきってもパネルの下に隠れたままになる
+ */
+.contentWithPanel {
+  padding-right: calc(var(--spacing-layout-panel-width) + var(--spacing-layout-panel-inset) * 2);
+}
+
 /* ===========================================================================
  * 見出し（4-5）
  * ======================================================================== */
@@ -291,6 +299,8 @@
  * 階層は BoardRow が --level に入れて渡す。上下は 3px 空ける
  */
 .card {
+  /* カードのどこを押しても詳細パネルが開くので、指の形のカーソルにする */
+  cursor: pointer;
   position: absolute;
   top: 3px;
   bottom: 3px;
@@ -326,6 +336,16 @@
   color: var(--color-error);
 }
 
+/*
+ * 詳細パネルで開いているカード（6-1、DESIGN.md の Colors・Elevation）：
+ * 枠を primary にし、影の代わりに外側へ 3px の focus-ring を付ける。
+ * 超過・親の枠より優先するので、それらより後ろに書く
+ */
+.cardOpen {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
 /* 数値の列は Inter で桁をそろえる */
 .cardId,
 .cardEffort,
@@ -353,9 +373,22 @@
   white-space: nowrap;
 }
 
-.nameText {
+/*
+ * タスク名。詳細パネルを開くボタンにしてあるが、見た目はただの文字にする
+ * （ボタンの既定の枠・背景・書体を消し、カードの文字をそのまま受け継ぐ）
+ */
+.nameButton {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 /* 開閉マークのボタン。見た目はアイコンだけにする */
@@ -494,33 +527,6 @@
   color: var(--color-on-surface-sub);
 }
 
-/* --- 状態の札（chip-*） --- */
-.chip {
-  padding: 2px var(--spacing-sm);
-  border-radius: var(--rounded-full);
-  font-family: var(--typography-label-md-font-family);
-  font-size: var(--typography-label-md-font-size);
-  font-weight: var(--typography-label-md-font-weight);
-}
-.chipDone {
-  background: var(--color-done-container);
-  color: var(--color-on-done);
-}
-.chipInProgress {
-  background: var(--color-primary-container);
-  color: var(--color-primary);
-}
-/* 未着手だけは border-strong の内側の線を付ける（DESIGN.md の Components） */
-.chipNotStarted {
-  background: var(--color-surface);
-  color: var(--color-on-surface-sub);
-  box-shadow: inset 0 0 0 1px var(--color-border-strong);
-}
-.chipOver {
-  background: var(--color-error-container);
-  color: var(--color-error);
-}
-
 /* --- カードの下端の進捗ライン（3px。末端は青、親はグレー、超過は赤） --- */
 .progressLine {
   position: absolute;
@@ -608,6 +614,10 @@
 /* 今日の日付の見出しは、列より濃い黄色 */
 .todayHead {
   background: var(--color-today-head);
+}
+/* 詳細パネルで開いているタスクの行は、稼働日のマスを薄い青にする（6-1、focus-row） */
+.focusCell {
+  background: var(--color-focus-row);
 }
 /* 工程の行は、稼働日のマスにも薄い背景を敷く */
 .phaseCell {

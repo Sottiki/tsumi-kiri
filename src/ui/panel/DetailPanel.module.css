@@ -1,0 +1,380 @@
+/*
+ * 詳細パネル（DESIGN.md の detail-panel・Layout・Components、画面案③）
+ *
+ * 色・文字・角丸・余白は tokens.css の変数だけを使う。
+ * トークンにない細かい寸法（上部の余白 18px 20px 14px、欄の間 5px・10px・18px など）は、
+ * 画面案③の値をそのまま使う（DESIGN.md の Layout）。
+ */
+
+/* ===========================================================================
+ * 枠：画面の右に、上下と右に 16px 空けて浮かせる。背景は暗くしない
+ * ======================================================================== */
+
+.panel {
+  position: fixed;
+  top: var(--spacing-layout-panel-inset);
+  right: var(--spacing-layout-panel-inset);
+  bottom: var(--spacing-layout-panel-inset);
+  /* タスク表・ガント（sticky の z-index 3 まで）より前に出す */
+  z-index: 10;
+  width: var(--spacing-layout-panel-width);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rounded-panel);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+}
+
+/* ===========================================================================
+ * 1. 上部（ID・工程・移動と閉じるボタン、タスク名、札）
+ * ======================================================================== */
+
+/* 下部とともに、divider の線で中身と区切る（DESIGN.md の Components） */
+.header {
+  padding: 18px var(--spacing-xl) 14px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+/* ID と工程の名前 */
+.meta {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-family: var(--typography-body-sm-font-family);
+  font-size: var(--typography-body-sm-font-size);
+  color: var(--color-on-surface-sub);
+}
+.metaId {
+  font-family: var(--typography-numeric-sm-font-family);
+  font-weight: 600;
+  color: var(--color-on-surface);
+}
+
+/* 前後へ移るボタン（icon-button：32px、白地、border-strong の枠） */
+.iconButton {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--color-surface);
+  color: var(--color-on-surface-sub);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--rounded-sm);
+  cursor: pointer;
+}
+/* 先頭・末尾で押せないとき。色を薄くして、押せないことを伝える */
+.iconButton:disabled {
+  color: var(--color-on-surface-faint);
+  cursor: default;
+}
+
+/* 閉じるボタン（icon-button-close：32px、button-quiet の地、枠なし） */
+.closeButton {
+  composes: iconButton;
+  background: var(--color-button-quiet);
+  color: var(--color-on-surface);
+  border-color: transparent;
+}
+
+/*
+ * タスク名（panel-title）。ふだんは枠なしで、ただの見出しに見せる。
+ * 左の余白の分だけ左へずらし、文字の頭を上の ID とそろえる（画面案③のとおり）
+ */
+.nameInput {
+  display: block;
+  width: 100%;
+  margin: 10px 0 0 -8px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: transparent;
+  color: var(--color-on-surface);
+  border: 1px solid transparent;
+  border-radius: var(--rounded-sm);
+  font-family: var(--typography-panel-title-font-family);
+  font-size: var(--typography-panel-title-font-size);
+  font-weight: var(--typography-panel-title-font-weight);
+}
+/* 指を乗せたとき・打っているときは枠を出して、編集できることを伝える */
+.nameInput:hover,
+.nameInput:focus {
+  border-color: var(--color-border-strong);
+}
+
+/* 状態の札を並べる */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+}
+.fire {
+  color: var(--color-fire);
+}
+
+/* ===========================================================================
+ * 中身（縦にスクロールする）
+ * ======================================================================== */
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: var(--spacing-lg) var(--spacing-xl);
+}
+
+/* --- 2. 警告の枠（warning-box） --- */
+.warning {
+  display: flex;
+  gap: 10px;
+  padding: var(--spacing-md) 14px;
+  background: var(--color-error-panel);
+  border: 1px solid var(--color-error-border);
+  border-radius: var(--rounded-md);
+}
+.warningIcon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--color-error);
+}
+/* 警告の文章は body-sm、行の高さ 1.7（DESIGN.md の Typography） */
+.warningText {
+  font-family: var(--typography-body-sm-font-family);
+  font-size: var(--typography-body-sm-font-size);
+  line-height: 1.7;
+  color: var(--color-on-error-panel);
+}
+.warningTitle {
+  font-weight: 700;
+}
+
+/* --- 欄の並べ方 --- */
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+/* 欄のラベル（label-md）と、その下の欄 */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-family: var(--typography-label-md-font-family);
+  font-size: var(--typography-label-md-font-size);
+  font-weight: var(--typography-label-md-font-weight);
+  color: var(--color-on-surface-sub);
+}
+
+/* 入力欄の共通部分（input：枠は border-strong、余白 8px 10px） */
+.inputBase {
+  min-width: 0;
+  padding: var(--spacing-sm) 10px;
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--rounded-sm);
+}
+
+/* --- 3. 工数・進捗率（panel-value） --- */
+.valueInput {
+  composes: inputBase;
+  font-family: var(--typography-panel-value-font-family);
+  font-size: var(--typography-panel-value-font-size);
+  font-weight: var(--typography-panel-value-font-weight);
+}
+
+/* 編集できない値（field-readonly）。入力欄と同じ高さになるよう、枠の 1px を余白に足す */
+.readonlyValue {
+  padding: 9px 10px;
+  background: var(--color-surface-muted);
+  color: var(--color-on-surface);
+  border-radius: var(--rounded-sm);
+  font-family: var(--typography-panel-value-font-family);
+  font-size: var(--typography-panel-value-font-size);
+  font-weight: var(--typography-panel-value-font-weight);
+}
+
+/* 進捗バーの上の「進捗」と「1.8 / 3.0 人日」 */
+.progressLabel {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-xs);
+  font-size: var(--typography-label-md-font-size);
+  color: var(--color-on-surface-sub);
+}
+.numeric {
+  font-family: var(--typography-numeric-sm-font-family);
+}
+
+/* 進捗バー（高さ 8px、角丸 full）。色は一覧の進捗ラインと同じ */
+.progressTrack {
+  height: 8px;
+  overflow: hidden;
+  background: var(--color-badge);
+  border-radius: var(--rounded-full);
+}
+.progressFill {
+  height: 100%;
+  background: var(--color-primary);
+}
+.progressFillParent {
+  background: var(--color-parent-done);
+}
+.progressFillOver {
+  background: var(--color-error);
+}
+
+/* --- 4. 優先度（3つのボタンをつなげた形）・期日 --- */
+.priorityGroup {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--rounded-sm);
+}
+.priorityButton {
+  flex: 1;
+  padding: var(--spacing-sm) 0;
+  background: var(--color-surface);
+  color: var(--color-on-surface-sub);
+  border: 0;
+  font-family: var(--typography-numeric-sm-font-family);
+  font-size: var(--typography-body-md-font-size);
+  font-weight: 700;
+  cursor: pointer;
+}
+/* 2つ目から左に区切り線 */
+.priorityButton + .priorityButton {
+  border-left: 1px solid var(--color-border-strong);
+}
+/* 選んでいる優先度。high は赤、mid は橙（DESIGN.md の priority-*）。low は灰色の地 */
+.priorityHigh {
+  background: var(--color-error-container);
+  color: var(--color-error);
+}
+.priorityMid {
+  background: var(--color-warning-container);
+  color: var(--color-warning);
+}
+.priorityLow {
+  background: var(--color-surface-muted);
+  color: var(--color-on-surface);
+}
+
+.dateInput {
+  composes: inputBase;
+  font-family: var(--typography-numeric-sm-font-family);
+  font-size: var(--typography-body-md-font-size);
+}
+
+/* --- 5. 日程の表 --- */
+.sectionLabel {
+  margin-bottom: var(--spacing-xs);
+  font-family: var(--typography-label-md-font-family);
+  font-size: var(--typography-label-md-font-size);
+  font-weight: var(--typography-label-md-font-weight);
+  color: var(--color-on-surface-sub);
+}
+
+/*
+ * 表の外枠は border、角丸 md。角丸の内側に中身を収めるため、
+ * border-collapse: separate にして overflow: hidden で切る（collapse だと角丸が効かない）
+ */
+.scheduleTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--rounded-md);
+  font-family: var(--typography-numeric-sm-font-family);
+  font-size: var(--typography-body-sm-font-size);
+  table-layout: fixed;
+}
+/* 列の幅は 1.2 : 1 : 1（画面案③） */
+.scheduleTable th:first-child {
+  width: 37.5%;
+}
+.scheduleTable th,
+.scheduleTable td {
+  padding: 9px var(--spacing-md);
+  text-align: left;
+  font-weight: 400;
+}
+/* 見出しの行 */
+.scheduleTable thead th {
+  padding: 7px var(--spacing-md);
+  background: var(--color-surface-sunken);
+  color: var(--color-on-surface-sub);
+  font-family: var(--typography-label-md-font-family);
+  font-size: var(--typography-label-md-font-size);
+  font-weight: var(--typography-label-md-font-weight);
+}
+/* モードの名前は日本語なので Noto Sans JP */
+.scheduleTable tbody th {
+  font-family: var(--typography-body-sm-font-family);
+}
+.scheduleTable tbody tr > * {
+  border-top: 1px solid var(--color-divider);
+}
+/* 終了日は太字。超過なら赤、間に合えば緑（決定事項68） */
+/* .scheduleTable td（太さ 400）より強くするため、.scheduleTable を前に付ける */
+.scheduleTable .endCell {
+  font-weight: 700;
+}
+.endOver {
+  color: var(--color-error);
+}
+.endOnTime {
+  color: var(--color-success);
+}
+
+/* --- 6. 付け替え --- */
+.select {
+  composes: inputBase;
+  font-family: var(--typography-body-md-font-family);
+  font-size: var(--typography-body-md-font-size);
+}
+
+/* --- 7. メモ --- */
+.memo {
+  composes: inputBase;
+  resize: vertical;
+  font-family: var(--typography-body-md-font-family);
+  font-size: var(--typography-body-md-font-size);
+  font-weight: var(--typography-body-md-font-weight);
+}
+
+/* ===========================================================================
+ * 8. 下部（削除・＋子タスクを追加）。背景は surface-subtle
+ * ======================================================================== */
+
+.footer {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: 14px var(--spacing-xl);
+  background: var(--color-surface-subtle);
+  border-top: 1px solid var(--color-divider);
+}
+.spacer {
+  flex: 1;
+}
