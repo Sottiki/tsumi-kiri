@@ -272,7 +272,7 @@ App
   - パネルの欄は、一覧と同じ `DraftInput`（メモは `DraftTextarea`）を使い、ストアの `updateTask`・`moveTask` などで反映する。欄に入ってから離れるまでの入力が、元に戻すの1件になる（6章）
   - 警告は `buildWarnings`、日程は計算結果（`normalRows`・`overtimeRows`）を読むだけで、パネルでは計算しない
   - 開いたときのスクロール（SPEC 3.2、決定事項71）：`Board.tsx` がバーのマス（`data-bar`）・左に固定したタスク表・見出し・パネル（`data-detail-panel`）の位置を測り、`scrollToBar.ts` がスクロールする先を決める。開いているタスクが変わったときだけ動かす
-  - パネルを開いている間は、ガントの中身の右に「パネルの幅＋左右の余白」の分の空きを足す。空きがないと、ガントの終わり近くのバーは、右へスクロールしきってもパネルの下に隠れたままになるため
+  - パネルを開いている間は、ガントの中身の右に「パネルの幅＋左右の余白」の分の空きを足す（SPEC 3.2、決定事項72。`Board.module.css` の `.contentWithPanel`）。空きがないと、ガントの終わり近くのバーは、右へスクロールしきってもパネルの下に隠れたままになるため
   - 削除の確認は `ConfirmDialog`（HTML の `<dialog>` を `showModal()` で開く）。外の部品を押せなくし、Esc でキャンセルになり、閉じたら前のフォーカスへ戻る、をブラウザに任せる
 - 見た目（色・文字・寸法・部品）は DESIGN.md に従う。トークンは `ui/tokens.css` に CSS 変数として置き、CSS Modules からはその変数だけを参照する。変数名は DESIGN.md のトークン名から作る（例：`colors.primary` → `--color-primary`、`spacing.layout.day-width` → `--spacing-layout-day-width`）
 - Excel出力の色は、同じ DESIGN.md のトークンを excel/ から TypeScript の定数として参照する（CSS 変数は使えないため）。定数は `excel/colors.ts` に手で書き写し、キーはトークン名と同じにする。DESIGN.md と同じ値かは `tests/excel-colors.test.ts` が DESIGN.md を読んで確かめる（決定 2026-11-23。YAML を読むライブラリを足さずに、写し間違いと直し忘れを防ぐ）
