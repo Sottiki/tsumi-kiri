@@ -278,3 +278,4 @@
 - [ ] 10-3 README.md：概要、スクショ、使い方、公開 URL
 - [ ] 10-4 画面案の画像を置き、SPEC.md と README から参照する（画面案のリンクは非公開のため）
   - 画像は、ユーザーがキャンバスから書き出して用意する（画面案はキャンバス専用の部品で書かれていて、手元のブラウザで描くには手間がかかるため）
+  - 画像は `docs/images/` に置き、相対パスで参照する。画面案は `mockup-main.png`・`mockup-excel.png`・`mockup-detail-panel.png`。10-3 の README のスクショも同じ場所に置く（例 `screenshot-main.png`）
