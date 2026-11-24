@@ -1,6 +1,6 @@
 # Tsumikiri 技術設計（architecture.md）
 
-最終更新：2026-11-23
+最終更新：2026-11-24
 状態：**確定（2026-11-21）**
 
 SPEC.md が「何を作るか」、このファイルは「どう作るか（技術）」、DESIGN.md は「どう見せるか（見た目）」を書く。食い違ったら SPEC.md を正とする。
@@ -54,16 +54,22 @@ src/
     controls.module.css  ボタン・入力欄の共通の見た目
     format.ts        数値の書式（工数 3.5、進捗の整数%）
     parse.ts         入力欄の文字の読み取り（format.ts の逆。正しい値だけを受ける。SPEC 3.1）
-    DraftInput.tsx   打っている途中の文字を手元に持つ入力欄。正しい値になったときだけストアに反映する
+    DraftInput.tsx   打っている途中の文字を手元に持つ入力欄（DraftInput）と、その複数行版（DraftTextarea。詳細パネルのメモ）。正しい値になったときだけストアに反映する
+    ConfirmDialog.tsx  確認ダイアログ（<dialog> の showModal）。タスクの削除で使い、段階8のPJTの削除・バックアップの上書きでも使う
+    chips.module.css・statusChip.ts  状態の札の見た目と、状態から札のクラスを引く表。タスク表と詳細パネルで共有する
     undoShortcut.ts  元に戻す・やり直すのキーの判定（React に依存しない）
     useUndoShortcuts.ts  そのキーを画面全体で受け取り、ストアの undo・redo を呼ぶ
-    icons.tsx        線のアイコン（開閉・炎・メモ・追加の＋）
+    icons.tsx        線のアイコン（開閉・炎・メモ・追加の＋、詳細パネルの上下・閉じる・注意）
     download.ts      Blob をファイル名つきでダウンロードさせる（Excel出力。段階8のバックアップでも使う）
     board/           タスク表とガント
-      Board.tsx        スクロールの枠。ストアの値を行に配る。開いたタスクの行が見えるまで縦にスクロールする
+      Board.tsx        スクロールの枠。ストアの値を行に配る。開いたタスクのバーが詳細パネルに隠れない範囲の中央に来るようスクロールする（寸法を測る）
       BoardHeader.tsx  列見出しと、月・曜日・日付の3段
       BoardRow.tsx     1行（工程の帯かタスクのカード、ツリー線、日付のマスとバー）
       rowLayout.ts     子の数・ツリー線・たたんで隠れる行を、行の並びから求める（React に依存しない）
+      scrollToBar.ts   開いたタスクのバーへのスクロール量を、測った寸法から求める（React に依存しない）
+    panel/           詳細パネル（段階6）
+      DetailPanel.tsx  パネル本体。開いているタスク（view.openTaskId）の全項目を出し、ストアの操作で反映する
+      panelModel.ts    前後のタスク、親タスクの選択肢、終わった分の工数、日程の表の終了日の色（React に依存しない）
   main.tsx
 tests/             core と excel のテスト（docs/test-cases.md の例を元にする）。ui/ の React に依存しない関数のテストも置く
   helpers.ts       テストのデータを人の読む形（工数 3.5・進捗 60%）で短く作るための関数
@@ -249,7 +255,7 @@ App
 ├─ Board              タスク表＋ガント（見出しは上に固定、タスク表は左に固定）
 │   ├─ BoardHeader      列見出し／月・曜日・日付
 │   └─ BoardRow         1行＝左のカードと右の日付セル
-├─ DetailPanel        詳細パネル
+├─ DetailPanel        詳細パネル（position: fixed で右に浮かせる。開いているタスクがなければ描かない）
 ├─ DaysOffDialog      休業日・有給の一覧
 └─ ConfirmDialog      削除・上書きの確認
 ```
@@ -261,6 +267,13 @@ App
   - 画面全体は `height: 100vh` の縦の flex にし、枠（Board）だけが `flex: 1` で伸びる
 - 字下げとツリー線の位置は、行の階層を CSS 変数（`--level`）で渡し、CSS の `calc` と `indent-step` のトークンで決める
 - ScheduleRow は優先度・期日・メモと工程の名前を持たないので、画面では元のタスク（id から引く表）と `PHASES` から取り出す
+- **詳細パネル（段階6）**
+  - 開いているタスクは、ストアの表示の状態 `view.openTaskId` で決める。カード（`BoardRow`）を押すとストアの `openTask` を呼び、パネルはその id のタスクを描く。別のタスクへ移ったら、パネルの中の状態（打ちかけの文字・確認ダイアログ）を捨てるため、タスクの id を React の `key` にする
+  - パネルの欄は、一覧と同じ `DraftInput`（メモは `DraftTextarea`）を使い、ストアの `updateTask`・`moveTask` などで反映する。欄に入ってから離れるまでの入力が、元に戻すの1件になる（6章）
+  - 警告は `buildWarnings`、日程は計算結果（`normalRows`・`overtimeRows`）を読むだけで、パネルでは計算しない
+  - 開いたときのスクロール（SPEC 3.2、決定事項71）：`Board.tsx` がバーのマス（`data-bar`）・左に固定したタスク表・見出し・パネル（`data-detail-panel`）の位置を測り、`scrollToBar.ts` がスクロールする先を決める。開いているタスクが変わったときだけ動かす
+  - パネルを開いている間は、ガントの中身の右に「パネルの幅＋左右の余白」の分の空きを足す。空きがないと、ガントの終わり近くのバーは、右へスクロールしきってもパネルの下に隠れたままになるため
+  - 削除の確認は `ConfirmDialog`（HTML の `<dialog>` を `showModal()` で開く）。外の部品を押せなくし、Esc でキャンセルになり、閉じたら前のフォーカスへ戻る、をブラウザに任せる
 - 見た目（色・文字・寸法・部品）は DESIGN.md に従う。トークンは `ui/tokens.css` に CSS 変数として置き、CSS Modules からはその変数だけを参照する。変数名は DESIGN.md のトークン名から作る（例：`colors.primary` → `--color-primary`、`spacing.layout.day-width` → `--spacing-layout-day-width`）
 - Excel出力の色は、同じ DESIGN.md のトークンを excel/ から TypeScript の定数として参照する（CSS 変数は使えないため）。定数は `excel/colors.ts` に手で書き写し、キーはトークン名と同じにする。DESIGN.md と同じ値かは `tests/excel-colors.test.ts` が DESIGN.md を読んで確かめる（決定 2026-11-23。YAML を読むライブラリを足さずに、写し間違いと直し忘れを防ぐ）
 
