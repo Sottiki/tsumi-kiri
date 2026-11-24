@@ -314,7 +314,7 @@ components:
 - **赤（error）**：エンド日を超えたものだけに使う。文字・バーの完了分・優先度 high・削除ボタンは `error`、バーの残りは `error-soft`。超過したタスクのカードは `error-card`、警告の枠と超過の完了予定カードは `error-panel` と `error-border`、警告の文章は `on-error-panel`
 - **エンド日の線**：`end-line` の2pxの実線を、エンド日の列の右に引く
 - **もう一方のモードの完了予定の線**：`other-mode-line` の1pxの点線（dashed）を、完了予定日の列の右に引く。エンド日の線と同じ列なら、エンド日の線を優先する
-- **緑（success）**：完了予定がエンド日に間に合うときのカードだけに使う
+- **緑（success）**：エンド日に間に合うことを表すときだけに使う。完了予定がエンド日に間に合うときのカードと、詳細パネルの日程の表で、エンド日に間に合う終了日の文字（段階6で追加、2026-11-24）
 - **橙（warning・fire）**：優先度 mid、「期日超過」の札、炎アイコン
 - **暦**：土日祝の列は `day-off`、今日の列は `today`（日付の見出しは `today-head`）。日曜・祝日の文字は `sunday`、土曜の文字は `saturday`。日程が変わった終了日のハイライトは `flash`
 - **Excel出力**：見出し `excel-header`、罫線 `excel-grid`、土日祝 `excel-day-off`、工程の行 `phase-row`、親の行 `excel-parent-row`。バーの色は画面と同じ（工程の残りも画面と同じ `phase-rest`）。エンド日を超えた末端の行の文字は `error`。工程・親は超過しても文字は `on-surface` のまま、バーだけ赤にする
