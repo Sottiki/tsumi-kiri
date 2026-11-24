@@ -1,0 +1,51 @@
+/*
+ * 確認ダイアログ（DESIGN.md の Components Not In The Mockup）
+ *
+ * 画面案にない部品なので、詳細パネルと同じ「浮いた面」の見た目にそろえる：
+ * 白い面・border の枠・角丸 panel・詳細パネルと同じ影（Elevation：ダイアログには影を付ける）。
+ * 幅は詳細パネルと同じ layout.panel-width、内側の余白はパネルと同じ左右 20px（xl）。
+ */
+
+.dialog {
+  width: var(--spacing-layout-panel-width);
+  max-width: calc(100vw - var(--spacing-layout-panel-inset) * 2);
+  padding: var(--spacing-xl);
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rounded-panel);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+}
+
+/*
+ * ダイアログの後ろは暗くしない（詳細パネルと同じく、背景を暗くしない。DESIGN.md の Do's and Don'ts）。
+ * ブラウザの既定では薄く暗くなるので、透明にする
+ */
+.dialog::backdrop {
+  background: transparent;
+}
+
+/* 問い（太字の1行目） */
+.title {
+  margin: 0 0 var(--spacing-sm);
+  font-family: var(--typography-body-md-font-family);
+  font-size: var(--typography-body-md-font-size);
+  font-weight: 700;
+}
+
+/* 説明（body-sm、補足の色） */
+.message {
+  margin: 0;
+  font-family: var(--typography-body-sm-font-family);
+  font-size: var(--typography-body-sm-font-size);
+  line-height: 1.7;
+  color: var(--color-on-surface-sub);
+}
+
+/* ボタンは右に寄せて並べる（実行するボタンを右端に） */
+.buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+}

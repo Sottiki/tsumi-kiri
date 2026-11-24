@@ -83,7 +83,10 @@ export interface AppActions {
   addTask(): string;
   /** 工程の帯からの追加：その工程の末尾に足し、詳細パネルで開く。足したタスクの id を返す */
   addTaskToPhase(phaseId: PhaseId): string;
-  /** 子タスクを足す。足せない（孫の下など）ときは null。足したタスクの id を返す */
+  /**
+   * 子タスクを足し、そのまま詳細パネルで開く（決定事項69）。
+   * 足せない（孫の下など）ときは null。足したタスクの id を返す
+   */
   addChildTask(parentId: string): string | null;
   deleteTask(taskId: string): void;
   reorderTask(taskId: string, overTaskId: string): void;
@@ -285,6 +288,8 @@ export function createAppStore(options: AppStoreOptions): AppStore {
             if (!canAddChild(activeProject(get().data), parentId)) return null;
             const task = createTask(makeId);
             changeActive((project) => treeOps.addChildTask(project, parentId, task));
+            // 「＋タスク追加」と同じく、足したタスクをそのまま開く
+            set((s) => ({ view: { ...s.view, openTaskId: task.id } }));
             return task.id;
           },
           deleteTask: (taskId) => changeActive((project) => treeOps.deleteTask(project, taskId)),

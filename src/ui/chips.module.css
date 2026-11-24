@@ -1,0 +1,54 @@
+/*
+ * 状態の札（DESIGN.md の chip-*）
+ *
+ * タスク表のカード（board/BoardRow.tsx）と、詳細パネルの上部（panel/DetailPanel.tsx）の両方で使うので、
+ * ここに1つだけ置く。どちらも同じ見た目にするため。
+ */
+
+.chip {
+  padding: 2px var(--spacing-sm);
+  border-radius: var(--rounded-full);
+  font-family: var(--typography-label-md-font-family);
+  font-size: var(--typography-label-md-font-size);
+  font-weight: var(--typography-label-md-font-weight);
+  white-space: nowrap;
+}
+
+/* chip-done：完了 */
+.chipDone {
+  composes: chip;
+  background: var(--color-done-container);
+  color: var(--color-on-done);
+}
+
+/* chip-in-progress：進行中 */
+.chipInProgress {
+  composes: chip;
+  background: var(--color-primary-container);
+  color: var(--color-primary);
+}
+
+/* chip-not-started：未着手。これだけは border-strong の内側の線を付ける（DESIGN.md の Components） */
+.chipNotStarted {
+  composes: chip;
+  background: var(--color-surface);
+  color: var(--color-on-surface-sub);
+  box-shadow: inset 0 0 0 1px var(--color-border-strong);
+}
+
+/* chip-over：超過 */
+.chipOver {
+  composes: chip;
+  background: var(--color-error-container);
+  color: var(--color-error);
+}
+
+/* chip-overdue：期日超過。炎アイコンと文字を横に並べる（詳細パネルの上部） */
+.chipOverdue {
+  composes: chip;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2xs);
+  background: var(--color-warning-container);
+  color: var(--color-warning);
+}

@@ -13,10 +13,16 @@
  * - 日程が変わった終了日のハイライト（5-3）。ストアの highlightKeys に入っている行だけ光らせる
  * - 工程の帯の「＋」（5-4）。その工程の末尾にタスクを足す
  *
+ * 段階6で足したもの：
+ * - カードをクリックすると、詳細パネルを開く（6-1、決定事項62）。
+ *   ガントのマスでは開かない。カードの中でも、入力欄と開閉マークを押したときは開かない
+ * - 開いているタスクは、カードを青い枠で囲み、ガントの行を薄い青（focus-row）にする
+ * - バーのマスに data-bar を付ける。パネルを開いたときに、バーの位置を測ってスクロールするため（6-2）
+ *
  * React.memo で包み、行に渡す値が変わらなければ描き直さない（architecture.md 8章）。
  */
 
-import { memo, type CSSProperties } from 'react';
+import { memo, type CSSProperties, type MouseEvent } from 'react';
 import { formatMonthDay } from '../../core/calendar';
 import { barCells } from '../../core/schedule';
 import { PHASES } from '../../core/tree';
@@ -27,7 +33,6 @@ import type {
   HoursPerDay,
   PhaseId,
   ScheduleRow,
-  Status,
   Task,
 } from '../../core/types';
 import { cx } from '../cx';
@@ -35,6 +40,7 @@ import { DraftInput } from '../DraftInput';
 import { formatTenths, rowProgressPct } from '../format';
 import { ChevronIcon, FireIcon, MemoIcon, PlusIcon } from '../icons';
 import { parseEffortInput, parseProgressInput } from '../parse';
+import { STATUS_CHIP_CLASS } from '../statusChip';
 import type { RowLayout } from './rowLayout';
 import styles from './Board.module.css';
 
@@ -50,6 +56,10 @@ interface BoardRowProps {
   otherModeFinish: DateString | null;
   /** 日程が変わったので、終了日をハイライトするか（SPEC 3.1：約1.5秒） */
   highlighted: boolean;
+  /** 詳細パネルで開いているタスクの行か（青い枠と、ガントの行の薄い青） */
+  isOpen: boolean;
+  /** 詳細パネルを開く（ストアの openTask） */
+  onOpen: (taskId: string) => void;
   /** 親タスクの開閉を切り替える */
   onToggle: (taskId: string) => void;
   /** タスクの項目を変える（ストアの updateTask） */
@@ -64,14 +74,6 @@ const PRIORITY_MARKS = {
   mid: { mark: '=', className: 'priorityMid' },
   low: { mark: '-', className: 'priorityLow' },
 } as const;
-
-/** 状態の札のクラス名（DESIGN.md の chip-*） */
-const STATUS_CHIPS: Record<Status, string> = {
-  完了: 'chipDone',
-  進行中: 'chipInProgress',
-  未着手: 'chipNotStarted',
-  超過: 'chipOver',
-};
 
 export const BoardRow = memo(function BoardRow(props: BoardRowProps) {
   const { layout } = props;
@@ -153,7 +155,15 @@ const PHASE_NAMES: Record<string, string> = Object.fromEntries(
 // 左：タスクのカード
 // ---------------------------------------------------------------------------
 
-function TaskCard({ layout, task, highlighted, onToggle, onUpdateTask }: BoardRowProps) {
+function TaskCard({
+  layout,
+  task,
+  highlighted,
+  isOpen,
+  onOpen,
+  onToggle,
+  onUpdateTask,
+}: BoardRowProps) {
   const { row, childCount, collapsed } = layout;
   const isParent = !row.leaf;
   const isOver = row.status === '超過';
@@ -184,12 +194,38 @@ function TaskCard({ layout, task, highlighted, onToggle, onUpdateTask }: BoardRo
   // 階層を CSS に渡し、字下げとツリー線の位置を CSS の calc で決める（値は tokens.css の indent-step）
   const levelStyle = { '--level': row.level } as CSSProperties;
 
+  /**
+   * カードのどこかをクリックしたら、詳細パネルを開く（決定事項62）。
+   * ただし、入力欄（工数・進捗率）と、ボタン（開閉マーク）を押したときは開かない。
+   * それらは自分の操作（入力・開閉）のために押されたものなので。
+   * 押された部品（event.target）から外側へたどり、入力欄かボタンの中なら何もしない。
+   *
+   * タスク名のボタン（下の nameButton）はキーボードで開くためのもので、
+   * これを押したときは、そのボタンの onClick で開く（ここでは何もしない）。
+   */
+  const handleCardClick = (event: MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    if (target.closest('input, button, textarea, select') !== null) return;
+    onOpen(row.key);
+  };
+
   return (
     <>
       <TreeLines layout={layout} />
+      {/*
+        カードの div に onClick を付けるのは、マウスでカードのどこを押しても開けるようにするため。
+        キーボードでは、下のタスク名のボタンで開く（div はキーボードで押せないので、本来の <button> を別に置く）
+      */}
       <div
-        className={cx(styles.card, isParent && styles.cardParent, isOver && styles.cardOver)}
+        className={cx(
+          styles.card,
+          isParent && styles.cardParent,
+          isOver && styles.cardOver,
+          isOpen && styles.cardOpen,
+        )}
         style={levelStyle}
+        data-testid={`card-${row.label}`}
+        onClick={handleCardClick}
       >
         <div className={styles.cardId}>{row.label}</div>
         <div className={styles.cardName}>
@@ -205,7 +241,16 @@ function TaskCard({ layout, task, highlighted, onToggle, onUpdateTask }: BoardRo
             </button>
           )}
           {row.overDue && <FireIcon className={styles.fire} />}
-          <span className={styles.nameText}>{name}</span>
+          {/* タスク名は、詳細パネルを開くボタンにする。見た目はただの文字のまま */}
+          <button
+            type="button"
+            className={styles.nameButton}
+            aria-label={`${name}の詳細を開く`}
+            aria-expanded={isOpen}
+            onClick={() => onOpen(row.key)}
+          >
+            {name}
+          </button>
           {isParent && <span className={styles.childCount}>{childCount}</span>}
           {task !== undefined && task.memo !== '' && <MemoIcon className={styles.memo} />}
         </div>
@@ -269,7 +314,7 @@ function TaskCard({ layout, task, highlighted, onToggle, onUpdateTask }: BoardRo
         </div>
         <div className={styles.cardDue}>{task?.due && formatMonthDay(task.due)}</div>
         <div className={styles.colStatusCenter}>
-          <span className={cx(styles.chip, styles[STATUS_CHIPS[row.status]])}>{row.status}</span>
+          <span className={STATUS_CHIP_CLASS[row.status]}>{row.status}</span>
         </div>
 
         {/* カードの下端の進捗ライン（幅＝進捗率） */}
@@ -332,7 +377,15 @@ function barColorClass(row: ScheduleRow, done: boolean): string | undefined {
   return done ? styles.barParentDone : styles.barParentRest;
 }
 
-function GanttCells({ layout, days, hoursPerDay, today, endDate, otherModeFinish }: BoardRowProps) {
+function GanttCells({
+  layout,
+  days,
+  hoursPerDay,
+  today,
+  endDate,
+  otherModeFinish,
+  isOpen,
+}: BoardRowProps) {
   const { row } = layout;
   const isPhase = row.kind === 'phase';
 
@@ -353,14 +406,18 @@ function GanttCells({ layout, days, hoursPerDay, today, endDate, otherModeFinish
             key={day.date}
             className={cx(
               styles.cell,
-              // 背景：土日祝はグレー、今日は黄色、工程の行の稼働日は薄いグレー（画面案と同じ優先の順）
+              // 背景：土日祝はグレー、今日は黄色、開いているタスクの行の稼働日は薄い青、
+              // 工程の行の稼働日は薄いグレー（画面案と同じ優先の順）
               !isWork && styles.dayOff,
               isWork && day.date === today && styles.today,
+              isWork && day.date !== today && isOpen && styles.focusCell,
               isWork && day.date !== today && isPhase && styles.phaseCell,
               // 縦線：エンド日の赤線を、もう一方のモードの点線より優先する
               day.date === otherModeFinish && styles.otherModeLine,
               day.date === endDate && styles.endLine,
             )}
+            // バーのあるマスの目印。詳細パネルを開いたときに、バーの左端・右端を測るのに使う（Board.tsx）
+            data-bar={done !== undefined ? '' : undefined}
           >
             {done !== undefined && (
               <div className={cx(styles.bar, barHeightClass, barColorClass(row, done))} />
