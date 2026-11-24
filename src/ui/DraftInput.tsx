@@ -1,7 +1,9 @@
 /**
  * 打っている途中の文字を手元に持つ入力欄（tasks.md 5-1・5-2・5-5、SPEC 3.1「操作」）
  *
- * 一覧の工数・進捗率と、ヘッダのPJT名・開始日・エンド日で使う。
+ * 一覧の工数・進捗率と、ヘッダのPJT名・開始日・エンド日、詳細パネルの各欄で使う。
+ * 詳細パネルのメモ（複数行）は、同じ動きの DraftTextarea を使う。
+ * 動きの中身は useDraftField にまとめ、<input> と <textarea> の両方から使う。
  *
  * ■ なぜ手元に持つのか
  * 入力欄の value にストアの値をそのまま入れると、ストアに反映しない文字（打っている途中の「3.」など）を
@@ -13,7 +15,8 @@
  * - 打つたび：onDraft(打った文字, 編集の回の目印) を呼ぶ。反映するかどうかは呼ぶ側が決める
  * - 欄を離れたとき：draft を捨てて、ストアの今の値（value）の表示に戻す。
  *   反映しなかった文字（「1.25」など）はここで消え、工数なら「3.0」のように整った形になる（決定事項56）
- * - Enter：欄を離れたときと同じにする（カーソルを外す）
+ * - Enter：欄を離れたときと同じにする（カーソルを外す）。
+ *   ただし DraftTextarea（メモ）では、Enter は改行に使うので外さない
  *
  * ■ 編集の回の目印（editSession）
  * カーソルが入るたびに新しい目印を作り、onDraft に渡す。ストアは同じ目印の変更を、
@@ -30,13 +33,17 @@
  * アプリの履歴は戻さない（ひとつ前の、別の変更が戻ってしまうため）。
  */
 
-import { useRef, useState, type InputHTMLAttributes, type KeyboardEvent } from 'react';
+import {
+  useRef,
+  useState,
+  type InputHTMLAttributes,
+  type KeyboardEvent,
+  type TextareaHTMLAttributes,
+} from 'react';
 import { undoShortcutOf } from './undoShortcut';
 
-interface DraftInputProps extends Omit<
-  InputHTMLAttributes<HTMLInputElement>,
-  'value' | 'defaultValue' | 'onChange'
-> {
+/** DraftInput・DraftTextarea に共通の props */
+interface DraftProps {
   /** ストアの今の値を、欄に出す形にしたもの（工数なら '3.0'） */
   value: string;
   /**
@@ -61,14 +68,19 @@ interface Draft {
 /** 編集の回の目印に振る番号。画面全体で1つずつ増やす */
 let editSessionCounter = 0;
 
-export function DraftInput({
-  value,
-  onDraft,
-  onFocus,
-  onBlur,
-  onKeyDown,
-  ...rest
-}: DraftInputProps) {
+/** <input> と <textarea> のどちらでもよい要素の型 */
+type FieldElement = HTMLInputElement | HTMLTextAreaElement;
+
+/**
+ * 打っている途中の文字を手元に持つ動き（上のコメントの「動き」）。
+ * 欄に渡す value と、イベントの関数を返す。呼ぶ側は、それをそのまま欄に付ける。
+ *
+ * @param blurOnEnter Enter でカーソルを外すか。1行の欄は true、メモ（複数行）は false
+ */
+function useDraftField<E extends FieldElement>(
+  { value, onDraft }: DraftProps,
+  blurOnEnter: boolean,
+) {
   const [draft, setDraft] = useState<Draft | null>(null);
   /** 今の編集の回の目印。カーソルが入るたびに作り直す（描き直しに関わらないので ref に持つ） */
   const editSessionRef = useRef('');
@@ -81,11 +93,9 @@ export function DraftInput({
   }
   const shown = draft !== null && draft.base === value ? draft.text : value;
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    onKeyDown?.(event);
-
+  const handleKeyDown = (event: KeyboardEvent<E>) => {
     // 日本語入力の変換を確定する Enter では、カーソルを外さない
-    if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
+    if (blurOnEnter && event.key === 'Enter' && !event.nativeEvent.isComposing) {
       event.currentTarget.blur();
       return;
     }
@@ -100,31 +110,87 @@ export function DraftInput({
     // それ以外の Ctrl+Z・やり直すは、そのまま画面全体の useUndoShortcuts が受け取る
   };
 
+  return {
+    value: shown,
+    onFocus: () => {
+      // 新しい編集の回を始める
+      editSessionCounter += 1;
+      editSessionRef.current = `input-${editSessionCounter}`;
+    },
+    onChange: (text: string) => {
+      const newValue = onDraft(text, editSessionRef.current);
+      setDraft({
+        text,
+        // 反映したら、ストアの値は newValue になる。反映しなければ、今の値のまま
+        base: newValue ?? value,
+        committed: (draft?.committed ?? false) || newValue !== null,
+      });
+    },
+    onBlur: () => setDraft(null),
+    onKeyDown: handleKeyDown,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 1行の欄
+// ---------------------------------------------------------------------------
+
+type DraftInputProps = Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  'value' | 'defaultValue' | 'onChange'
+> &
+  DraftProps;
+
+export function DraftInput({
+  value,
+  onDraft,
+  onFocus,
+  onBlur,
+  onKeyDown,
+  ...rest
+}: DraftInputProps) {
+  const field = useDraftField<HTMLInputElement>({ value, onDraft }, true);
   return (
     <input
       {...rest}
-      value={shown}
+      value={field.value}
       onFocus={(event) => {
-        // 新しい編集の回を始める
-        editSessionCounter += 1;
-        editSessionRef.current = `input-${editSessionCounter}`;
+        field.onFocus();
         onFocus?.(event);
       }}
-      onChange={(event) => {
-        const text = event.target.value;
-        const newValue = onDraft(text, editSessionRef.current);
-        setDraft({
-          text,
-          // 反映したら、ストアの値は newValue になる。反映しなければ、今の値のまま
-          base: newValue ?? value,
-          committed: (draft?.committed ?? false) || newValue !== null,
-        });
-      }}
+      onChange={(event) => field.onChange(event.target.value)}
       onBlur={(event) => {
-        setDraft(null);
+        field.onBlur();
         onBlur?.(event);
       }}
-      onKeyDown={handleKeyDown}
+      onKeyDown={(event) => {
+        onKeyDown?.(event);
+        field.onKeyDown(event);
+      }}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 複数行の欄（詳細パネルのメモ）
+// ---------------------------------------------------------------------------
+
+type DraftTextareaProps = Omit<
+  TextareaHTMLAttributes<HTMLTextAreaElement>,
+  'value' | 'defaultValue' | 'onChange' | 'onFocus' | 'onBlur' | 'onKeyDown'
+> &
+  DraftProps;
+
+export function DraftTextarea({ value, onDraft, ...rest }: DraftTextareaProps) {
+  const field = useDraftField<HTMLTextAreaElement>({ value, onDraft }, false);
+  return (
+    <textarea
+      {...rest}
+      value={field.value}
+      onFocus={field.onFocus}
+      onChange={(event) => field.onChange(event.target.value)}
+      onBlur={field.onBlur}
+      onKeyDown={field.onKeyDown}
     />
   );
 }
