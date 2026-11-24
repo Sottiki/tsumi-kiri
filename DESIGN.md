@@ -446,4 +446,4 @@ components:
   - 面は `surface`、枠は `border`、角丸 `panel`、影は詳細パネルと同じ。幅は `layout.panel-width`、内側の余白は `xl`（20px）。画面の真ん中に出す
   - 後ろは暗くしない（詳細パネルと同じ）
   - 1行目の問いは `body-md` の太字（700）。その下の説明は `body-sm`、`on-surface-sub`、行の高さ 1.7
-  - ボタンは右に寄せ、「キャンセル」（`button-secondary`）、実行するボタン（削除なら `button-danger`）の順に `sm`（8px）空けて並べる。問いとの間は `lg`（16px）
+  - ボタンは右に寄せ、「キャンセル」（`button-secondary`）、実行するボタン（削除なら `button-danger`）の順に `sm`（8px）空けて並べる。上の説明との間は `lg`（16px）。問いと説明の間は `sm`（8px）
