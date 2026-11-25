@@ -1,6 +1,6 @@
 # Tsumikiri 技術設計（architecture.md）
 
-最終更新：2026-11-24
+最終更新：2026-11-25
 状態：**確定（2026-11-21）**
 
 SPEC.md が「何を作るか」、このファイルは「どう作るか（技術）」、DESIGN.md は「どう見せるか（見た目）」を書く。食い違ったら SPEC.md を正とする。
@@ -322,3 +322,9 @@ App
 - **人が見る確認**：画面案との見比べ（色・寸法）は、テストにせず人が見る。web-design-guidelines の skill でもレビューする
 - **ビルド**：`npm run build` で `dist/index.html` が1つできる。これを PC に置けばそのまま使える
 - **公開**：GitHub Actions で、`main` に入ったらテストとビルドを行い、GitHub Pages に公開する。PR ではテストとビルドだけを行う
+  - 公開先：https://sottiki.github.io/tsumi-kiri/ 。ビルドは相対パス（`base: './'`）なので、`/tsumi-kiri/` の下でもそのまま開ける
+  - `ci.yml` の3つ目の job（`deploy`）で行う。`check` と `e2e` の両方が通ってから動く
+  - 公開するのは、`e2e` でビルドして画面のテストを通した `dist/`。`e2e` が Pages 用の成果物として預け（`upload-pages-artifact`）、`deploy` が公開する（`deploy-pages`）。もう一度ビルドはしない
+  - 書く権限（`pages: write`・`id-token: write`）は `deploy` にだけ渡す。ほかの job は読むだけ
+  - 公開は1つずつ順番に行う（`concurrency`）。途中の公開は止めない
+  - リポジトリの Pages の公開元は「GitHub Actions」（2026-11-25 に設定）。公開できるのは `main` だけ（`github-pages` 環境の決まり）
