@@ -71,7 +71,7 @@ MCP サーバーは常に安全な設定で呼び出す。
 Playwright MCP（画面の確認に使う）は、さらに次を守る。
 
 - 使い捨てのブラウザ（`--isolated`）で、画面を出さずに（`--headless`）動かす
-- 開けるのは `--allowed-origins` に書いた開発用の URL（`localhost`）だけ。GitHub Pages に公開したら、その URL を足す。それ以外の URL は開かない
+- 開けるのは `--allowed-origins` に書いた URL だけ：開発用の `http://localhost:5173` と、公開先の `https://sottiki.github.io`（セミコロンで区切る）。それ以外の URL は開かない
   - Google Fonts も開かないので、スクショはシステムの書体になる。画面案と見比べるときは、書体を見比べの対象にしない
 - `--secrets`、`--storage-state`、`--save-session`、`--allow-unrestricted-file-access`、`--no-sandbox` は使わない
 - スクショなどの出力は `.playwright-mcp/` に置き、Git に入れない
