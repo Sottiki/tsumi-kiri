@@ -100,5 +100,5 @@ Node.js は 26系（`.nvmrc`、Volta で固定）。
 | `npm run build` | 型の確認と、1つの HTML（`dist/index.html`）へのビルド |
 | `npm run preview` | ビルド結果を開く |
 
-- CI（`.github/workflows/ci.yml`）は、PR と `main` への push で lint・テスト・ビルド・画面のテストを行う
+- CI（`.github/workflows/ci.yml`）は、PR と `main` への push で lint・テスト・ビルド・画面のテストを行う。`main` への push では、通ったら GitHub Pages（https://sottiki.github.io/tsumi-kiri/ ）に公開する
 - `src/ui/tokens.css` は DESIGN.md のトークンを書き写したもの。DESIGN.md を変えたら、こちらも合わせる

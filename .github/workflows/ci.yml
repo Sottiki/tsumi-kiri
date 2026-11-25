@@ -5,13 +5,16 @@ on:
   push:
     branches: [main]
 
+# 既定の権限は「読むだけ」。書く権限が要る job（deploy）にだけ、その job の中で足す
 permissions:
   contents: read
 
-# 2つの job は同時に流れる。
+# job の流れ：
 # - check：lint とユニットのテスト。すぐ終わるので、失敗したときに早く分かる
 # - e2e：ビルドと画面のテスト。ブラウザを入れるのに時間がかかるので、check を待たずに始める
-# 全体の時間は、2つの合計ではなく、長い方（e2e）で決まる
+#   全体の時間は、2つの合計ではなく、長い方（e2e）で決まる
+# - deploy：main に入ったときだけ。check と e2e の両方が通ってから、GitHub Pages に公開する
+#   公開するのは、e2e でビルドして画面のテストを通した dist/ そのもの（もう一度ビルドしない）
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -40,3 +43,34 @@ jobs:
       # 画面を出す方の Chromium は使わないので、ダウンロードを省く
       - run: npx playwright install --with-deps --only-shell chromium
       - run: npx playwright test
+      # main に入ったときだけ、テストを通した dist/ を Pages 用の成果物として預ける。
+      # 前の手順が1つでも失敗したら、ここには来ない（テストに落ちたものは公開されない）。
+      # 成果物の名前は既定の github-pages。下の deploy が、この名前で受け取る
+      - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: dist/
+
+  deploy:
+    # check と e2e の両方が通るまで待つ
+    needs: [check, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # Pages への公開に要る権限は、この job にだけ渡す
+    # - pages: write：Pages に公開する
+    # - id-token: write：公開の依頼が、このリポジトリの Actions から来たことを GitHub に証明する
+    permissions:
+      pages: write
+      id-token: write
+    # 公開先の「環境」。Actions の画面に、公開した URL が出る
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # 公開は1つずつ順番に行う。続けてマージしたときに、公開どうしがぶつからないようにする。
+    # 途中の公開を止めると Pages が中途半端になりうるので、止めずに順番を待たせる
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
