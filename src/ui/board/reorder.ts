@@ -80,36 +80,42 @@ export function dragGroupOf(layouts: readonly RowLayout[], activeKey: string): D
   };
 }
 
-/** かたまりの縦の範囲（画面の上からの位置。単位は px） */
-export interface BlockRect {
-  top: number;
-  bottom: number;
+/**
+ * かたまりの範囲（画面の左上からの位置。単位は px）。
+ * タスクの行では縦の範囲（start が上端、end が下端）、PJTタブでは横の範囲（start が左端、end が右端）。
+ * 縦か横かが違うだけで、すき間の決め方は同じなので、どちらにも使える形にしている。
+ */
+export interface Span {
+  start: number;
+  end: number;
 }
 
 /**
- * 指の縦の位置から、どの「すき間」に落ちるかを決める。
+ * 指の位置から、どの「すき間」に落ちるかを決める。
  *
  * すき間は、かたまりとかたまりの間に番号を振ったもの：
  * 0 が先頭のかたまりの前、1 が1番目と2番目の間、……、n（かたまりの数）が最後のかたまりの後ろ。
- * 指が、あるかたまりの上半分にあればその前のすき間、下半分にあれば後ろのすき間を選ぶ。
+ * 指が、あるかたまりの前半分にあればその前のすき間、後ろ半分にあれば後ろのすき間を選ぶ。
  *
- * 兄弟の範囲の外（先頭のかたまりの上端より上、最後のかたまりの下端より下）なら null。
- * 別の工程・別の親の行の上では落とせない（SPEC 3.1、決定事項75）。
+ * 範囲の外（先頭のかたまりの始まりより前、最後のかたまりの終わりより後ろ）なら null。
+ * タスクでは、別の工程・別の親の行の上では落とせない（SPEC 3.1、決定事項75）。
+ * PJTタブでは、呼ぶ側が指の位置を範囲の中に寄せてから渡す（帯の端まで動かせば、先頭・末尾に落ちる）。
  *
- * @param rects かたまりごとの縦の範囲。上から順
+ * @param spans かたまりごとの範囲。並びの順（上から・左から）
+ * @param pointer 指の位置（タスクなら縦、タブなら横）
  */
-export function gapAt(rects: readonly BlockRect[], pointerY: number): number | null {
-  const first = rects[0];
-  const last = rects[rects.length - 1];
+export function gapAt(spans: readonly Span[], pointer: number): number | null {
+  const first = spans[0];
+  const last = spans[spans.length - 1];
   if (first === undefined || last === undefined) return null;
-  if (pointerY < first.top || pointerY > last.bottom) return null;
+  if (pointer < first.start || pointer > last.end) return null;
 
-  for (let index = 0; index < rects.length; index += 1) {
-    const rect = rects[index] as BlockRect;
-    const middle = (rect.top + rect.bottom) / 2;
-    if (pointerY < middle) return index;
+  for (let index = 0; index < spans.length; index += 1) {
+    const span = spans[index] as Span;
+    const middle = (span.start + span.end) / 2;
+    if (pointer < middle) return index;
   }
-  return rects.length;
+  return spans.length;
 }
 
 /** 落とす先 */

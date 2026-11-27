@@ -39,7 +39,8 @@ import { BoardHeader } from './BoardHeader';
 import { BoardRow, DragCard } from './BoardRow';
 import { layoutRows } from './rowLayout';
 import { scrollTargetForBar } from './scrollToBar';
-import { keepVertical, useRowDrag } from './useRowDrag';
+import { keepVertical } from '../drag';
+import { useRowDrag } from './useRowDrag';
 import styles from './Board.module.css';
 
 /**
