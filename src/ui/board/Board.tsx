@@ -18,9 +18,17 @@
  * そのタスクのバーが、詳細パネルに隠れない範囲の中央に来るよう、横と縦にスクロールする。
  * パネルで値を変えただけ（開いているタスクは同じ）のときは動かさない。
  * 寸法を測るのはここ（DOM）、どこへスクロールするかの計算は scrollToBar.ts（純粋な関数）で行う。
+ *
+ * ■ ドラッグでの並べ替え（7-1・7-2、SPEC 3.1、決定事項73〜75）
+ * 一覧を dnd-kit の DndContext で囲み、カード（BoardRow）を掴めるようにする。
+ * ドラッグ中の状態（掴んだタスク・落とす先）は useRowDrag.ts が持ち、ここでは行に配るだけ。
+ * - 元の場所の行を薄くする（dimmed）
+ * - 指についてくる写し（DragOverlay の中の DragCard）
+ * - 落とす位置の青い線（.dropLine）。写しに隠れないよう、写しより手前に、画面に固定した位置で描く
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { DndContext, DragOverlay } from '@dnd-kit/core';
+import { useEffect, useMemo, useRef, type CSSProperties } from 'react';
 import { selectActiveProject } from '../../store/appStore';
 import { useAppStore } from '../../store';
 import { displayedHoursPerDay, displayedRows } from '../../store/derived';
@@ -28,10 +36,17 @@ import { localToday } from '../../store/appStore';
 import type { Project, Task } from '../../core/types';
 import { cx } from '../cx';
 import { BoardHeader } from './BoardHeader';
-import { BoardRow } from './BoardRow';
+import { BoardRow, DragCard } from './BoardRow';
 import { layoutRows } from './rowLayout';
 import { scrollTargetForBar } from './scrollToBar';
+import { keepVertical, useRowDrag } from './useRowDrag';
 import styles from './Board.module.css';
+
+/**
+ * 指についてくる写しの重なりの順（z-index）。詳細パネル（10）より手前に出す。
+ * 青い線（Board.module.css の .dropLine、21）は、さらにその手前
+ */
+const DRAG_OVERLAY_Z_INDEX = 20;
 
 /**
  * PJTのタスクを id から引ける表にする。
@@ -61,6 +76,7 @@ export function Board() {
   const updateTask = useAppStore((state) => state.actions.updateTask);
   const addTaskToPhase = useAppStore((state) => state.actions.addTaskToPhase);
   const openTask = useAppStore((state) => state.actions.openTask);
+  const reorderTask = useAppStore((state) => state.actions.reorderTask);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -83,6 +99,14 @@ export function Board() {
   const layouts = useMemo(() => layoutRows(rows, collapsedIds), [rows, collapsedIds]);
   const tasksById = useMemo(() => indexTasks(project), [project]);
 
+  // ドラッグでの並べ替え。落としたら、ストアの reorderTask で並べ替える（元に戻すの1件になる）
+  const drag = useRowDrag({ layouts, tasksById, scrollRef, headerRef, onReorder: reorderTask });
+  // 指についてくる写しに描く行（掴んでいるタスクの行）
+  const draggedLayout =
+    drag.group === null
+      ? undefined
+      : layouts.find((layout) => layout.row.key === drag.group?.activeKey);
+
   // 今日の列（黄色）。カードの「今日から ○ 営業日」と同じく、使っている人のPCの日付で決める
   const today = localToday();
 
@@ -93,35 +117,66 @@ export function Board() {
 
   return (
     <section className={styles.board} aria-label="タスク表とガント">
-      <div className={styles.scroll} data-testid="board-scroll" ref={scrollRef}>
-        {/*
-          パネルを開いている間は、中身の右にパネルの分の余白を足す（.contentWithPanel）。
-          ガントの終わり近くのバー（完了予定の日など）も、パネルに隠れない所までスクロールできるように
-        */}
-        <div className={cx(styles.content, openTaskId !== null && styles.contentWithPanel)}>
-          <BoardHeader ref={headerRef} days={computed.days} today={today} endDate={project.end} />
-          {layouts.map((layout) =>
-            layout.hidden ? null : (
-              <BoardRow
-                key={layout.row.key}
-                layout={layout}
-                task={tasksById.get(layout.row.key)}
-                days={computed.days}
-                hoursPerDay={hoursPerDay}
-                today={today}
-                endDate={project.end}
-                otherModeFinish={otherModeFinish}
-                highlighted={highlightKeys.has(layout.row.key)}
-                isOpen={openTaskId === layout.row.key}
-                onOpen={openTask}
-                onToggle={toggleCollapsed}
-                onUpdateTask={updateTask}
-                onAddToPhase={addTaskToPhase}
-              />
-            ),
-          )}
+      <DndContext {...drag.contextProps}>
+        <div className={styles.scroll} data-testid="board-scroll" ref={scrollRef}>
+          {/*
+            パネルを開いている間は、中身の右にパネルの分の余白を足す（.contentWithPanel）。
+            ガントの終わり近くのバー（完了予定の日など）も、パネルに隠れない所までスクロールできるように
+          */}
+          <div className={cx(styles.content, openTaskId !== null && styles.contentWithPanel)}>
+            <BoardHeader ref={headerRef} days={computed.days} today={today} endDate={project.end} />
+            {layouts.map((layout) =>
+              layout.hidden ? null : (
+                <BoardRow
+                  key={layout.row.key}
+                  layout={layout}
+                  task={tasksById.get(layout.row.key)}
+                  days={computed.days}
+                  hoursPerDay={hoursPerDay}
+                  today={today}
+                  endDate={project.end}
+                  otherModeFinish={otherModeFinish}
+                  highlighted={highlightKeys.has(layout.row.key)}
+                  isOpen={openTaskId === layout.row.key}
+                  onOpen={openTask}
+                  onToggle={toggleCollapsed}
+                  onUpdateTask={updateTask}
+                  onAddToPhase={addTaskToPhase}
+                  dimmed={drag.dimmedKeys.has(layout.row.key)}
+                />
+              ),
+            )}
+          </div>
         </div>
-      </div>
+        {/*
+          指についてくる写し。dnd-kit が、掴んだカードと同じ大きさで、画面の上に浮かせて描く。
+          dropAnimation={null}：落としたときに写しが元の場所へ戻る動きを付けない（DESIGN.md の Motion：そのほかの動きは付けない）
+        */}
+        <DragOverlay dropAnimation={null} modifiers={[keepVertical]} zIndex={DRAG_OVERLAY_Z_INDEX}>
+          {draggedLayout !== undefined && (
+            <DragCard layout={draggedLayout} task={tasksById.get(draggedLayout.row.key)} />
+          )}
+        </DragOverlay>
+        {/*
+          落とす位置の青い線（7-2、決定事項75）。位置は useRowDrag.ts が測る。
+          data-drop-row・data-drop-edge は、画面のテストで線の位置を確かめるための目印
+        */}
+        {drag.dropLine !== null && (
+          <div
+            className={styles.dropLine}
+            style={
+              {
+                top: drag.dropLine.top,
+                left: drag.dropLine.left,
+                width: drag.dropLine.width,
+                '--drop-level': drag.dropLine.level,
+              } as CSSProperties
+            }
+            data-drop-row={drag.dropLine.rowKey}
+            data-drop-edge={drag.dropLine.edge}
+          />
+        )}
+      </DndContext>
     </section>
   );
 }
