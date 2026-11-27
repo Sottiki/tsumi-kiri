@@ -1,6 +1,6 @@
 # Tsumikiri 技術設計（architecture.md）
 
-最終更新：2026-11-27
+最終更新：2026-11-28
 状態：**確定（2026-11-21）**
 
 SPEC.md が「何を作るか」、このファイルは「どう作るか（技術）」、DESIGN.md は「どう見せるか（見た目）」を書く。食い違ったら SPEC.md を正とする。
@@ -286,6 +286,7 @@ App
   - 落としたら、ストアの `reorderTask`（core の `reorderTask`）で並べ替える。1回の並べ替えが元に戻すの1件になり、日程が変わった終了日は今の仕組みでハイライトされる
   - 見た目：元の場所の行（掴んだタスクのかたまり）を薄くし、`DragOverlay` の中にカードの写し（`DragCard`）を描く。写しは縦にだけ動かし、落としたときの動きは付けない。青い線は写しに隠れないよう、写しより手前に `position: fixed` で描く（`.dropLine`）
   - ドラッグ中の Esc は取りやめだけにする。詳細パネルは `window` で Esc を受けて閉じるので、ドラッグ中は `document` で伝わるのを止める（dnd-kit は `document` で受けて取りやめる）
+  - 画面の読み上げの文言（dnd-kit が、画面に見えない場所に書き出すもの）は、既定の英語から日本語にする（`useRowDrag.ts` の `announcements`）。持ち上げたとき「〇〇を持ち上げました。」、落としたとき「〇〇を置きました。」、取りやめたとき「〇〇の並べ替えを取りやめました。」。動かしている途中は読み上げない
 - 見た目（色・文字・寸法・部品）は DESIGN.md に従う。トークンは `ui/tokens.css` に CSS 変数として置き、CSS Modules からはその変数だけを参照する。変数名は DESIGN.md のトークン名から作る（例：`colors.primary` → `--color-primary`、`spacing.layout.day-width` → `--spacing-layout-day-width`）
 - Excel出力の色は、同じ DESIGN.md のトークンを excel/ から TypeScript の定数として参照する（CSS 変数は使えないため）。定数は `excel/colors.ts` に手で書き写し、キーはトークン名と同じにする。DESIGN.md と同じ値かは `tests/excel-colors.test.ts` が DESIGN.md を読んで確かめる（決定 2026-11-23。YAML を読むライブラリを足さずに、写し間違いと直し忘れを防ぐ）
 
