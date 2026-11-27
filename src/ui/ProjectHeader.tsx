@@ -12,25 +12,29 @@
  * 欄に入ってから離れるまでの入力は、元に戻すの履歴で1件にまとまる（決定事項61。store/history.ts）。
  *
  * ■ ボタン
- * - 「Excel出力」は表示中のPJTを .xlsx でダウンロードする（段階9B）
- * - 「休業日・有給」「バックアップ」はまだ何もしない。中身は段階8で作る
+ * - 「休業日・有給」は、休業日・有給のダイアログ（DaysOffDialog）を開く（段階8：8-2）
+ * - 「バックアップ」は、書き出し・読み込みのメニュー（BackupMenu）を開く（段階8：8-3）
+ * - 「Excel出力」は表示中のPJTを .xlsx でダウンロードする（段階9B）。
+ *   作れなかったときは、ストアの知らせ（notice）で画面の左下に出す（段階8：8-4、SPEC 3.3）
+ *
+ * ■ PJT名の欄にカーソルを入れる（決定事項80）
+ * PJTタブの「＋」でPJTを足したとき、すぐに名前を打てるよう、PJT名の欄を選んだ状態にする（focusProjectName）。
  */
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { activeProject } from '../core/appData';
 import { createExcelFile } from '../excel/exportFile';
 import { localToday, selectActiveProject } from '../store/appStore';
 import { appStore, useAppStore } from '../store';
+import { BackupMenu } from './BackupMenu';
 import controls from './controls.module.css';
+import { DaysOffDialog } from './DaysOffDialog';
 import { downloadBlob } from './download';
 import { DraftInput } from './DraftInput';
 import { MAX_INPUT_YEAR, MIN_INPUT_YEAR, parseDateInput, parseProjectName } from './parse';
 import styles from './ProjectHeader.module.css';
 
-/**
- * Excel出力に失敗したときの知らせ。
- * 今はブラウザの alert で出す。段階8で、ストアの知らせ（notice）に移す（2026-11-23 決定、tasks.md 8-4）
- */
+/** Excel出力に失敗したときの知らせ（SPEC 3.3）。ストアの知らせ（notice）で出す（tasks.md 8-4） */
 const EXPORT_ERROR_MESSAGE =
   'Excel のファイルを作れませんでした。もう一度「Excel出力」を押してください。';
 
@@ -38,9 +42,28 @@ const EXPORT_ERROR_MESSAGE =
 const DATE_MIN = `${MIN_INPUT_YEAR}-01-01`;
 const DATE_MAX = `${MAX_INPUT_YEAR}-12-31`;
 
+/** PJT名の欄の id。PJTタブの「＋」から、この欄を選ぶのに使う */
+const PROJECT_NAME_INPUT_ID = 'project-name-input';
+
+/**
+ * PJT名の欄にカーソルを入れ、名前を選んだ状態にする（決定事項80）。
+ * PJTタブ（ui/tabs/ProjectTabs.tsx）から、PJTを足した後に呼ぶ。選んだ状態で打てば、名前が置き換わる
+ */
+export function focusProjectName() {
+  const input = document.getElementById(PROJECT_NAME_INPUT_ID);
+  if (input instanceof HTMLInputElement) {
+    input.focus();
+    input.select();
+  }
+}
+
 export function ProjectHeader() {
   const project = useAppStore(selectActiveProject);
   const updateProject = useAppStore((state) => state.actions.updateProject);
+  const showNotice = useAppStore((state) => state.actions.showNotice);
+
+  /** 休業日・有給のダイアログを開いているか */
+  const [daysOffOpen, setDaysOffOpen] = useState(false);
 
   // 欄に打った文字を反映する。反映したら新しい値を欄に出す形で返し、反映しなければ null を返す
   // （DraftInput の決まり）。editSession は、欄に入ってから離れるまでを元に戻すの1件にまとめる目印
@@ -87,7 +110,7 @@ export function ProjectHeader() {
       downloadBlob(file.blob, file.fileName);
     } catch (error) {
       console.error(error);
-      window.alert(EXPORT_ERROR_MESSAGE);
+      showNotice({ kind: 'export-error', message: EXPORT_ERROR_MESSAGE });
     } finally {
       exportingRef.current = false;
     }
@@ -99,7 +122,12 @@ export function ProjectHeader() {
 
       <label className={controls.field}>
         PJT名
-        <DraftInput className={styles.nameInput} value={project.name} onDraft={handleName} />
+        <DraftInput
+          id={PROJECT_NAME_INPUT_ID}
+          className={styles.nameInput}
+          value={project.name}
+          onDraft={handleName}
+        />
       </label>
       <label className={controls.field}>
         開始日
@@ -128,16 +156,16 @@ export function ProjectHeader() {
       {/* ここから右はボタン。空きを広げて右へ寄せる */}
       <div className={styles.spacer} />
       {/* 「休業日・有給」は画面案にないボタン。「バックアップ」と同じ形で左に置く */}
-      <button type="button" className={controls.secondary}>
+      <button type="button" className={controls.secondary} onClick={() => setDaysOffOpen(true)}>
         休業日・有給
       </button>
-      <button type="button" className={controls.secondary}>
-        バックアップ
-      </button>
+      <BackupMenu />
       {/* onClick は Promise を返す関数を受け取らないので、void で「待たない」と書いて呼ぶ */}
       <button type="button" className={controls.primary} onClick={() => void handleExportExcel()}>
         Excel出力
       </button>
+
+      {daysOffOpen && <DaysOffDialog onClose={() => setDaysOffOpen(false)} />}
     </header>
   );
 }

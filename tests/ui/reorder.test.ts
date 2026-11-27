@@ -113,8 +113,8 @@ describe('dragGroupOf：兄弟とかたまり', () => {
 describe('gapAt：指の位置から、すき間を決める', () => {
   // かたまりの縦の範囲。1つ目は親と子2つで 120px、2つ目は 40px
   const rects = [
-    { top: 100, bottom: 220 },
-    { top: 220, bottom: 260 },
+    { start: 100, end: 220 },
+    { start: 220, end: 260 },
   ];
 
   it('かたまりの上半分なら前のすき間、下半分なら後ろのすき間', () => {

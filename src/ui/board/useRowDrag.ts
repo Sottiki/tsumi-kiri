@@ -23,35 +23,19 @@
  * 位置は、線を引く行の左のタスク表（rowLeft）を測って決める。
  */
 
-import {
-  type Announcements,
-  type DragEndEvent,
-  type DragStartEvent,
-  type Modifier,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
+import { type Announcements, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { Task } from '../../core/types';
-import { CardPointerSensor } from './cardPointerSensor';
+import { useDragSensors, useStopEscapeWhileDragging } from '../drag';
 import {
   dragGroupOf,
   dropTargetFor,
   gapAt,
-  type BlockRect,
   type DragGroup,
   type DropTarget,
+  type Span,
 } from './reorder';
 import type { RowLayout } from './rowLayout';
-
-/** ドラッグを始めるまでに動かす距離（px）。これより短ければクリック（決定事項73） */
-const DRAG_START_DISTANCE = 5;
-
-/**
- * 写しを縦にだけ動かす（dnd-kit の modifier）。
- * 並べ替えは縦の並びだけなので、写しが横にずれると、どこへ落ちるのかが分かりにくくなるため。
- */
-export const keepVertical: Modifier = ({ transform }) => ({ ...transform, x: 0 });
 
 /**
  * 枠の端へ寄せたときの自動スクロール（SPEC 3.1）。縦だけにする。
@@ -70,10 +54,8 @@ interface Options {
 }
 
 export function useRowDrag({ layouts, tasksById, scrollRef, headerRef, onReorder }: Options) {
-  // マウスで掴む。5px 動かしたらドラッグを始める。キーボードの部品は使わない（決定事項74）
-  const sensors = useSensors(
-    useSensor(CardPointerSensor, { activationConstraint: { distance: DRAG_START_DISTANCE } }),
-  );
+  // マウスで掴む。5px 動かしたらドラッグを始める。キーボードの部品は使わない（決定事項74。ui/drag.ts）
+  const sensors = useDragSensors();
 
   /** 掴んでいるタスクと兄弟の並び。ドラッグしていなければ null */
   const [group, setGroup] = useState<DragGroup | null>(null);
@@ -112,19 +94,8 @@ export function useRowDrag({ layouts, tasksById, scrollRef, headerRef, onReorder
     };
   }, [group, scrollRef, headerRef]);
 
-  /**
-   * ドラッグ中の Esc は、ドラッグの取りやめだけにする（SPEC 3.1：Esc では何も変わらない）。
-   * 詳細パネルは window で Esc を受けて閉じる（DetailPanel.tsx）。dnd-kit は document で受けて取りやめる。
-   * document で伝わるのを止めれば、dnd-kit には届き、window（パネル）には届かない。
-   * stopPropagation は同じ document の上のほかの受け手（dnd-kit）は止めないので、登録の順番は気にしなくてよい。
-   */
-  useEffect(() => {
-    const stopEscapeWhileDragging = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && draggingRef.current) event.stopPropagation();
-    };
-    document.addEventListener('keydown', stopEscapeWhileDragging);
-    return () => document.removeEventListener('keydown', stopEscapeWhileDragging);
-  }, []);
+  // ドラッグ中の Esc は取りやめだけにし、詳細パネルまで届けない（ui/drag.ts）
+  useStopEscapeWhileDragging(draggingRef);
 
   /** ドラッグの状態をすべて消す（落としたとき・取りやめたとき） */
   const reset = () => {
@@ -222,15 +193,16 @@ function measureDropTarget(
   const rectOf = (key: string): DOMRect | null =>
     scroll.querySelector(`[data-row-key="${CSS.escape(key)}"]`)?.getBoundingClientRect() ?? null;
 
-  const rects: BlockRect[] = [];
+  // かたまりごとの縦の範囲：最初の行の上端から、最後の行の下端まで
+  const spans: Span[] = [];
   for (const block of group.blocks) {
     const first = rectOf(block[0] as string);
     const last = rectOf(block[block.length - 1] as string);
     if (first === null || last === null) return null; // 行が画面から消えた（ふつうは起きない）
-    rects.push({ top: first.top, bottom: last.bottom });
+    spans.push({ start: first.top, end: last.bottom });
   }
 
-  const gap = gapAt(rects, pointer.y);
+  const gap = gapAt(spans, pointer.y);
   return gap === null ? null : dropTargetFor(group, gap);
 }
 

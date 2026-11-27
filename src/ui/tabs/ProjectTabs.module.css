@@ -1,0 +1,138 @@
+/*
+ * PJTタブ（DESIGN.md の Components Not In The Mockup：PJTタブ、決定事項76・77）
+ *
+ * 画面の一番上の帯。地は surface-muted で、下のヘッダ（白）と分ける。
+ * 表示中のタブだけ白い地にして、下のヘッダとつながって見えるようにする（スプレッドシートのシートタブの逆向き）。
+ * 帯の下端の線は、帯の内側の影（inset）で引く。表示中のタブは白い地でその線を隠すので、ヘッダとつながる。
+ */
+
+.bar {
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--spacing-2xs);
+  padding: var(--spacing-xs) var(--spacing-2xl) 0;
+  background: var(--color-surface-muted);
+  box-shadow: inset 0 -1px 0 var(--color-border);
+}
+
+/* タブを並べる箱。並びきらないときは横にスクロールする（決定事項76） */
+.list {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--spacing-2xs);
+  min-width: 0;
+  overflow-x: auto;
+  /* スクロールバーは細くする（タブの下に太い帯が出ないように） */
+  scrollbar-width: thin;
+}
+
+/* タブ1つ：名前のボタンと、メニューのボタン（▾）を横に並べる。上の角だけ丸める */
+.tab {
+  flex: none;
+  display: flex;
+  align-items: center;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: var(--rounded-sm) var(--rounded-sm) 0 0;
+  color: var(--color-on-surface-sub);
+}
+.tab:hover {
+  background: var(--color-button-quiet);
+}
+
+/* 表示中のタブ：白い地・枠・太字（決定事項76） */
+.tabActive,
+.tabActive:hover {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-on-surface);
+}
+.tabActive .name {
+  font-weight: 600;
+}
+
+/* ドラッグ中に、元の場所のタブを薄くする（段階7のタスクと同じ不透明度） */
+.tabDimmed {
+  opacity: 0.4;
+}
+
+/*
+ * 名前のボタン。見た目はただの文字にする。長い名前は末尾を「…」で切る（決定事項76）。
+ * 幅の上限 200px は、PJT名の欄（220px）より少し狭くして、タブが並びやすいようにした値
+ */
+.name {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: var(--spacing-sm) var(--spacing-2xs) var(--spacing-sm) var(--spacing-md);
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: var(--typography-body-md-font-family);
+  font-size: var(--typography-body-md-font-size);
+  font-weight: var(--typography-body-md-font-weight);
+  cursor: pointer;
+}
+
+/* メニューを開くボタン（▾）。アイコンだけの小さなボタン（決定事項77） */
+.menuButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: var(--spacing-xs);
+  padding: var(--spacing-2xs);
+  border: 0;
+  border-radius: var(--rounded-xs);
+  background: none;
+  color: var(--color-on-surface-sub);
+  cursor: pointer;
+}
+.menuButton:hover {
+  background: var(--color-button-quiet);
+}
+
+/* PJTを足すボタン（＋）。タブの帯の右端。アイコンだけのボタン */
+.add {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-bottom: var(--spacing-2xs);
+  padding: 0;
+  border: 0;
+  border-radius: var(--rounded-sm);
+  background: none;
+  color: var(--color-on-surface-sub);
+  cursor: pointer;
+}
+.add:hover {
+  background: var(--color-button-quiet);
+}
+
+/* 指についてくるタブの写し。段階7のカードの写しと同じく、詳細パネルと同じ影、握った手のカーソル */
+.tabOverlay {
+  height: 100%;
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  border-radius: var(--rounded-sm);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+  cursor: grabbing;
+}
+
+/*
+ * 落とす位置の青い縦線（段階7のタスクの横線と同じ色・太さ）。
+ * 写しに隠れないよう、画面に固定した位置（position: fixed）で、写し（z-index 20）より手前に描く。
+ * left はタブの端。線の太さの半分だけ左へずらして、端の上に真ん中が来るようにする
+ */
+.dropLine {
+  position: fixed;
+  z-index: 21;
+  width: var(--spacing-layout-drop-line);
+  margin-left: calc(var(--spacing-layout-drop-line) / -2);
+  background: var(--color-primary);
+  pointer-events: none;
+}

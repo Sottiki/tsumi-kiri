@@ -50,26 +50,35 @@ src/
   ui/              画面のコンポーネント
     tokens.css       DESIGN.md のトークンを CSS 変数にしたもの
     App.tsx          画面全体の並び
-    ProjectHeader.tsx・SummaryCards.tsx・Toolbar.tsx   ヘッダ、上部のカード、操作の列
+    ProjectHeader.tsx・SummaryCards.tsx・Toolbar.tsx   ヘッダ、上部のカード、操作の列。ProjectHeader は PJT名の欄を選ぶ focusProjectName も持つ（段階8）
+    BackupMenu.tsx   バックアップのメニュー（書き出し・読み込み、上書きの確認）（段階8）
+    backup.ts        バックアップのファイル名・中身の文字・読み取り（toSaved・fromSaved と JSON をつなぐ。React に依存しない。段階8）
+    DaysOffDialog.tsx  休業日・有給のダイアログ（<dialog> の showModal）（段階8）
+    daysOffModel.ts  休業日の足し方の決まり（期間から平日だけを取り出す、足した後の文、年ごとの一覧。React に依存しない。段階8）
+    NoticeToast.tsx  ストアの知らせ（notice）を画面の左下に出す（段階8）
+    PopoverMenu.tsx  ボタンの下に開く小さなメニュー（HTML の popover）。PJTタブとバックアップで使う（段階8）
+    drag.ts          ドラッグで並べ替えるための共通の部品（マウスで掴む部品、ドラッグ中の Esc、写しを縦・横にだけ動かす modifier）。段階7で作り、段階8で共通にした
     controls.module.css  ボタン・入力欄の共通の見た目
     format.ts        数値の書式（工数 3.5、進捗の整数%）
     parse.ts         入力欄の文字の読み取り（format.ts の逆。正しい値だけを受ける。SPEC 3.1）
     DraftInput.tsx   打っている途中の文字を手元に持つ入力欄（DraftInput）と、その複数行版（DraftTextarea。詳細パネルのメモ）。正しい値になったときだけストアに反映する
-    ConfirmDialog.tsx  確認ダイアログ（<dialog> の showModal）。タスクの削除で使い、段階8のPJTの削除・バックアップの上書きでも使う
+    ConfirmDialog.tsx  確認ダイアログ（<dialog> の showModal）。タスクの削除・PJTの削除（赤のボタン）と、バックアップの上書き（主ボタン）で使う
     chips.module.css・statusChip.ts  状態の札の見た目と、状態から札のクラスを引く表。タスク表と詳細パネルで共有する
     undoShortcut.ts  元に戻す・やり直すのキーの判定（React に依存しない）
     useUndoShortcuts.ts  そのキーを画面全体で受け取り、ストアの undo・redo を呼ぶ
-    icons.tsx        線のアイコン（開閉・炎・メモ・追加の＋、詳細パネルの上下・閉じる・注意）
-    download.ts      Blob をファイル名つきでダウンロードさせる（Excel出力。段階8のバックアップでも使う）
+    icons.tsx        線のアイコン（開閉・炎・メモ・追加の＋、詳細パネルの上下・閉じる・注意。PJTタブのメニューの ▾ は下向きの山形を使う）
+    download.ts      Blob をファイル名つきでダウンロードさせる（Excel出力とバックアップの書き出し）
+    tabs/            PJTタブ（段階8）
+      ProjectTabs.tsx  タブの帯。切り替え・「＋」・「▾」のメニュー（削除の確認）・ドラッグでの並べ替え
+      useTabDrag.ts    タブのドラッグ中の状態（掴んだタブ・青い縦線）と、指とタブの位置を測る処理
     board/           タスク表とガント
       Board.tsx        スクロールの枠。ストアの値を行に配る。開いたタスクのバーが詳細パネルに隠れない範囲の中央に来るようスクロールする（寸法を測る）
       BoardHeader.tsx  列見出しと、月・曜日・日付の3段
       BoardRow.tsx     1行（工程の帯かタスクのカード、ツリー線、日付のマスとバー）
       rowLayout.ts     子の数・ツリー線・たたんで隠れる行を、行の並びから求める（React に依存しない）
       scrollToBar.ts   開いたタスクのバーへのスクロール量を、測った寸法から求める（React に依存しない）
-      reorder.ts       ドラッグでの並べ替え：兄弟とかたまり、指の位置から落とす先と青い線の行を求める（React に依存しない。段階7）
+      reorder.ts       ドラッグでの並べ替え：兄弟とかたまり、指の位置から落とす先と青い線の行を求める（React に依存しない。段階7）。すき間の決め方（gapAt）は縦横共通で、PJTタブでも使う
       useRowDrag.ts    ドラッグ中の状態（掴んだタスク・青い線）と、指と行の位置を測る処理。DndContext に渡す値を返す（段階7）
-      cardPointerSensor.ts  カードを掴むマウスの部品。入力欄と開閉マークでは掴まない（段階7）
     panel/           詳細パネル（段階6）
       DetailPanel.tsx  パネル本体。開いているタスク（view.openTaskId）の全項目を出し、ストアの操作で反映する
       panelModel.ts    前後のタスク、親タスクの選択肢、終わった分の工数、日程の表の終了日の色（React に依存しない）
@@ -242,6 +251,7 @@ JavaScript の数値は2進数の小数なので、`0.1 + 0.2` は `0.3000000000
 - `persist` は、書き込むときに `toSaved`、読み込むときに `fromSaved` を通す（4章）。通さないと、メモリの形（整数）のまま保存されてしまう
 - `version` を持たせ、形が変わったときは storage.ts で古い形から移行する
 - バックアップファイルも同じ形（`SavedAppData`）の JSON。読み込むときは形を検証し、壊れていれば読み込まずに理由を表示する
+- バックアップの読み込み（段階8、決定事項83）は、`ui/backup.ts` の `parseBackupText`（JSON として読む → `fromSaved`）で確かめてから、確認ダイアログの後にストアの `replaceData` で全体を置き換える。`change` を通すので、元に戻すの1件になる
 - 容量不足などで保存に失敗したら、画面に知らせる（データは画面上に残る）
 - 初めて開いたとき（保存データがないとき）は、サンプルPJTを作る（SPEC 3.1）
 - 保存データが壊れていたとき（JSON として読めない、または `fromSaved` が理由を返したとき）は、サンプルPJTで始め、理由を画面に知らせる（SPEC 6章）
@@ -251,8 +261,12 @@ JavaScript の数値は2進数の小数なので、`0.1 + 0.2` は `0.3000000000
 
 ```
 App
-├─ ProjectTabs        PJTタブ（追加・並べ替え・「…」メニュー）
+├─ ProjectTabs        PJTタブ（切り替え・追加・並べ替え・「▾」メニュー）
+│   └─ ConfirmDialog    PJTの削除の確認
 ├─ ProjectHeader      PJT名・開始日・エンド日／休業日・有給、バックアップ、Excel出力
+│   ├─ DaysOffDialog    休業日・有給の一覧（「休業日・有給」を押したときだけ描く）
+│   └─ BackupMenu       バックアップのメニュー（書き出し・読み込み）
+│       └─ ConfirmDialog  上書きの確認
 ├─ SummaryCards       総工数・エンド日・完了予定（通常／残業）
 ├─ Toolbar            モード切り替え・＋タスク追加・凡例
 ├─ Board              タスク表＋ガント（見出しは上に固定、タスク表は左に固定）
@@ -260,10 +274,11 @@ App
 │   └─ BoardRow         1行＝左のカードと右の日付セル
 ├─ DetailPanel        詳細パネル（position: fixed で右に浮かせる。開いているタスクがなければ描かない）
 │   └─ ConfirmDialog    タスクの削除の確認
-└─ DaysOffDialog      休業日・有給の一覧
+└─ NoticeToast        知らせ（position: fixed で左下に浮かせる。知らせがなければ描かない）
 ```
 
 - 確認ダイアログ（`ConfirmDialog`）は1か所にまとめて置かず、確認を出す部品がそれぞれの中で描く。段階6では詳細パネルがタスクの削除の確認を、段階8では PJTタブ（削除）とバックアップのメニュー（上書き）がそれぞれ描く
+- 休業日・有給のダイアログ（`DaysOffDialog`）も、開くボタンのある ProjectHeader が描く
 
 - ガントは1日1セルで描く（画面案と同じ）。1行は、左に固定したカード（幅820px）と、日付のセルを横に並べた形にする
 - 行は id をキーにし、`React.memo` で変わった行だけを描き直す。100行×100日程度なら仮想スクロールはいらない
@@ -281,12 +296,23 @@ App
   - 削除の確認は `ConfirmDialog`（HTML の `<dialog>` を `showModal()` で開く）。外の部品を押せなくし、Esc でキャンセルになり、閉じたら前のフォーカスへ戻る、をブラウザに任せる
 - **ドラッグでの並べ替え（段階7）**
   - 一覧（`Board`）を dnd-kit の `DndContext` で囲み、カード（`BoardRow` の `TaskCard`）を `useDraggable` で掴めるようにする。dnd-kit が返す `attributes`（role・tabIndex など）は付けない。カードがキーボードで止まる部品になり、ブラウザの基本の動作が変わるため（決定事項74）
-  - 掴むのはマウスだけ（`cardPointerSensor.ts`）。5px 動かしたらドラッグを始め、動かさずに離せばクリック（詳細パネルを開く）。入力欄と開閉マーク（`data-no-drag`）では掴まない
+  - 掴むのはマウスだけ（`ui/drag.ts` の `DragPointerSensor`）。5px 動かしたらドラッグを始め、動かさずに離せばクリック（詳細パネルを開く）。入力欄と開閉マーク（`data-no-drag`）では掴まない
   - 落とす先は dnd-kit の droppable を使わず、`useRowDrag.ts` が指の位置と行の位置（`getBoundingClientRect`）を、指が動くたび・枠がスクロールするたびに測り、`reorder.ts` で決める。落とせる範囲が「兄弟の行と、その下の子孫の行のかたまり」で、1つの部品ではないため
   - 落としたら、ストアの `reorderTask`（core の `reorderTask`）で並べ替える。1回の並べ替えが元に戻すの1件になり、日程が変わった終了日は今の仕組みでハイライトされる
   - 見た目：元の場所の行（掴んだタスクのかたまり）を薄くし、`DragOverlay` の中にカードの写し（`DragCard`）を描く。写しは縦にだけ動かし、落としたときの動きは付けない。青い線は写しに隠れないよう、写しより手前に `position: fixed` で描く（`.dropLine`）
   - ドラッグ中の Esc は取りやめだけにする。詳細パネルは `window` で Esc を受けて閉じるので、ドラッグ中は `document` で伝わるのを止める（dnd-kit は `document` で受けて取りやめる）
   - 画面の読み上げの文言（dnd-kit が、画面に見えない場所に書き出すもの）は、既定の英語から日本語にする（`useRowDrag.ts` の `announcements`）。持ち上げたとき「〇〇を持ち上げました。」、落としたとき「〇〇を置きました。」、取りやめたとき「〇〇の並べ替えを取りやめました。」。動かしている途中は読み上げない
+- **PJTタブ（段階8）**
+  - タブは、名前のボタン（押すと切り替え）と「▾」のメニューのボタンを並べた箱。ARIA の tab にはせず、表示中のタブに `aria-current="page"` を付ける。tab にすると矢印キーの操作を足す決まりがあり、ブラウザの基本の操作と変わるため（決定事項74 と同じ考え方）
+  - 並べ替えはタスクと同じ作り（`ui/drag.ts`、`reorder.ts` の `gapAt`・`dropTargetFor`）を横向きにしたもの（`useTabDrag.ts`）。すべてのタブが兄弟で、1つのタブが1つのかたまり。帯の端より外へ動かしたときは先頭・末尾に落ちるよう、指の位置を範囲の中に寄せてから決める。帯より上下に外れたら落とせない。自動スクロールは横だけ
+  - 「＋」でPJTを足したら、次の描画の後（`requestAnimationFrame`）に、ProjectHeader の `focusProjectName` で PJT名の欄を選び、足したタブが帯の外にあれば見える所までスクロールする（決定事項80）
+  - 読み上げの文言も日本語にする（「PJT「〇〇」のタブを持ち上げました。」など）
+- **メニュー（段階8。`PopoverMenu.tsx`）**
+  - HTML の popover（`popover="auto"` と `popoverTarget`）で作る。外を押す・Esc・ほかのメニューを開く、で閉じる動きをブラウザに任せる。項目は `popoverTargetAction="hide"` のボタンにし、押したら閉じる
+  - 箱は画面のいちばん上の層（top layer）に出るので、開く直前（`beforetoggle`）にボタンの位置を測り、すぐ下に置き直す
+  - ARIA の menu（矢印キーで選ぶ部品）にはしない。ふつうのボタンを Tab で順にたどる
+- **休業日・有給のダイアログ（段階8）**：欄の値はダイアログの中で持ち、「追加」を押したときに `daysOffModel.ts` の `planDaysOff` で足す日を決めて、ストアの `addDaysOff` に渡す。1回の追加・1日の削除が、それぞれ元に戻すの1件
+- **知らせ（段階8）**：ストアの `notice`（1つだけ）を `NoticeToast` が出す。保存の失敗・保存データの読み込みの失敗はストア（store/index.ts・appStore.ts）が、Excel出力とバックアップの読み込みの失敗は画面の部品が `showNotice` で出す。`role="alert"` で読み上げにも伝える
 - 見た目（色・文字・寸法・部品）は DESIGN.md に従う。トークンは `ui/tokens.css` に CSS 変数として置き、CSS Modules からはその変数だけを参照する。変数名は DESIGN.md のトークン名から作る（例：`colors.primary` → `--color-primary`、`spacing.layout.day-width` → `--spacing-layout-day-width`）
 - Excel出力の色は、同じ DESIGN.md のトークンを excel/ から TypeScript の定数として参照する（CSS 変数は使えないため）。定数は `excel/colors.ts` に手で書き写し、キーはトークン名と同じにする。DESIGN.md と同じ値かは `tests/excel-colors.test.ts` が DESIGN.md を読んで確かめる（決定 2026-11-23。YAML を読むライブラリを足さずに、写し間違いと直し忘れを防ぐ）
 
@@ -316,7 +342,7 @@ App
 - ダウンロードは Blob とリンクのクリックで行う（`file://` でも動く）
   - 「Excel出力」を押すと、ProjectHeader がストアから表示中のPJTと休業日を読み（`appStore.getState()`）、`createExcelFile` でファイルを作って `downloadBlob` に渡す
   - 作っている間にもう一度押されても、2つ目は作らない
-  - 失敗したら alert で知らせる。段階8で、ストアの知らせ（`notice`）に移す
+  - 失敗したら、ストアの知らせ（`notice`）で画面の左下に出す（段階8で alert から移した）
 - ExcelJS を画面に組み込むので、ビルドした HTML は約 1.4MB（gzip で約 360KB）になる。1つの HTML にまとめるため、読み込みを後回しにする（動的 import）ことはしない
 
 ## 10. テスト・ビルド・公開

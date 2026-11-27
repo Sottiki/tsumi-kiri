@@ -1,0 +1,149 @@
+/*
+ * 休業日・有給のダイアログ（DESIGN.md の Components Not In The Mockup：休業日・有給のダイアログ）
+ *
+ * 確認ダイアログと同じ「浮いた面」：白い面・border の枠・角丸 panel・詳細パネルと同じ影、幅 panel-width、余白 xl。
+ * 後ろは暗くしない（DESIGN.md の Do's and Don'ts）。
+ */
+
+.dialog {
+  width: var(--spacing-layout-panel-width);
+  max-width: calc(100vw - var(--spacing-layout-panel-inset) * 2);
+  padding: var(--spacing-xl);
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rounded-panel);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+}
+.dialog::backdrop {
+  background: transparent;
+}
+
+/* 見出しの行：左に題、右に閉じるボタン */
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+/* 題（詳細パネルのタスク名と同じ panel-title より一段小さい、確認ダイアログの問いと同じ太字の body-md にそろえる） */
+.title {
+  margin: 0;
+  font-family: var(--typography-body-md-font-family);
+  font-size: var(--typography-body-md-font-size);
+  font-weight: 700;
+}
+
+/* 説明（body-sm、補足の色）。確認ダイアログの説明と同じ */
+.lead {
+  margin: var(--spacing-sm) 0 0;
+  font-family: var(--typography-body-sm-font-family);
+  font-size: var(--typography-body-sm-font-size);
+  line-height: 1.7;
+  color: var(--color-on-surface-sub);
+}
+
+/* 追加の欄：開始日・終了日を横に2つ、名前は幅いっぱい、追加ボタンは右下 */
+.form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+}
+.labelField {
+  grid-column: 1 / -1;
+}
+.addButton {
+  grid-column: 2;
+  justify-self: end;
+}
+
+/* 足した結果・足せなかった理由（body-sm、補足の色）。空のときも高さを取って、出たときに下がずれないようにする */
+.message {
+  min-height: 1.7em;
+  margin: var(--spacing-sm) 0 0;
+  font-family: var(--typography-body-sm-font-family);
+  font-size: var(--typography-body-sm-font-size);
+  line-height: 1.7;
+  color: var(--color-on-surface-sub);
+}
+
+/*
+ * 一覧。長くなったら、この中だけを縦にスクロールする（ダイアログが画面からはみ出さないように）。
+ * 上は divider の線で、追加の欄と分ける
+ */
+.list {
+  max-height: 280px;
+  overflow-y: auto;
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-divider);
+}
+
+.empty {
+  margin: var(--spacing-sm) 0;
+  font-family: var(--typography-body-sm-font-family);
+  font-size: var(--typography-body-sm-font-size);
+  color: var(--color-on-surface-sub);
+}
+
+/* 年の見出し（label-md、補足の色）。年をまたぐ休みでも、どの年か分かるように */
+.year {
+  margin: var(--spacing-sm) 0 var(--spacing-2xs);
+  font-family: var(--typography-label-md-font-family);
+  font-size: var(--typography-label-md-font-size);
+  font-weight: var(--typography-label-md-font-weight);
+  color: var(--color-on-surface-sub);
+}
+
+.days {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 1日ぶん：日付・名前・削除ボタン。行の間は divider の線 */
+.day {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-2xs) 0;
+  border-bottom: 1px solid var(--color-divider);
+  font-family: var(--typography-body-md-font-family);
+  font-size: var(--typography-body-md-font-size);
+}
+
+/* 日付（例：12/29(火)）。桁をそろえるため幅を決める */
+.date {
+  flex: none;
+  width: 80px;
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 削除ボタン（×）。アイコンだけの小さなボタン。押すとすぐ消える（Ctrl+Z で戻せる） */
+.remove {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--rounded-sm);
+  background: none;
+  color: var(--color-on-surface-sub);
+  cursor: pointer;
+}
+.remove:hover {
+  background: var(--color-button-quiet);
+}

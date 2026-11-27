@@ -19,13 +19,6 @@ const EXPECTED_FILE_NAME = '工数ガント_社内ポータル刷新_2026-11-19.
 test('Excel出力のボタンを押すと、xlsx がダウンロードされる', async ({ page }) => {
   await openOnMockupDay(page);
 
-  // 失敗したときの alert が出たら、テストを失敗させる（alert はテストを止めてしまうので、閉じてから記録する）
-  const dialogs: string[] = [];
-  page.on('dialog', (dialog) => {
-    dialogs.push(dialog.message());
-    void dialog.dismiss();
-  });
-
   // waitForEvent('download') は、ダウンロードが始まるのを待つ。
   // 押す前に待ち始めておかないと、押した直後に始まったダウンロードを取りこぼすことがあるので、
   // 「待ち始める → 押す → 待ち終わる」の順に書く
@@ -43,5 +36,23 @@ test('Excel出力のボタンを押すと、xlsx がダウンロードされる'
     'ガント（残業10h）',
   ]);
 
-  expect(dialogs).toEqual([]);
+  // 失敗の知らせ（段階8：左下の知らせ）は出ていない
+  await expect(page.getByTestId('notice')).toHaveCount(0);
+});
+
+test('Excel のファイルを作れなかったときは、左下に知らせを出す（SPEC 3.3、tasks.md 8-4）', async ({
+  page,
+}) => {
+  // ダウンロードの URL を作る関数を、失敗するものに差し替えてから開く（失敗したときの動きを確かめるため）
+  await page.addInitScript(() => {
+    URL.createObjectURL = () => {
+      throw new Error('テストのために失敗させる');
+    };
+  });
+  await openOnMockupDay(page);
+  await page.getByRole('button', { name: 'Excel出力' }).click();
+
+  const notice = page.getByTestId('notice');
+  await expect(notice).toContainText('Excel のファイルを作れませんでした。');
+  await expect(notice).toHaveAttribute('data-kind', 'export-error');
 });

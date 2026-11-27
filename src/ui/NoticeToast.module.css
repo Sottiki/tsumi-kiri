@@ -1,0 +1,42 @@
+/*
+ * 知らせ（DESIGN.md の Components Not In The Mockup：知らせ、決定事項84）
+ *
+ * 画面の左下に浮かせる。詳細パネルと同じ「浮いた面」：白い面・border の枠・詳細パネルと同じ影。
+ * 左下の余白は、詳細パネルの外側の余白（panel-inset）と同じ。幅の上限は詳細パネルと同じ panel-width。
+ * 角丸は上部のカードと同じ lg。
+ */
+
+.toast {
+  position: fixed;
+  left: var(--spacing-layout-panel-inset);
+  bottom: var(--spacing-layout-panel-inset);
+  /* タスク表・ガント（sticky の z-index 3 まで）より前、詳細パネル（10）と同じ層。左右に分かれるので重ならない */
+  z-index: 10;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  max-width: var(--spacing-layout-panel-width);
+  padding: var(--spacing-md) var(--spacing-md) var(--spacing-md) var(--spacing-lg);
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rounded-lg);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+}
+
+/* 注意のアイコン（warning の色）。文の1行目の高さにそろえる */
+.icon {
+  flex: none;
+  margin-top: 7px;
+  color: var(--color-warning);
+}
+
+/* 文（body-sm）。閉じるボタンの高さ（32px）の中で、1行目が真ん中に来るよう上下に余白を取る */
+.message {
+  flex: 1;
+  margin: 0;
+  padding: 7px 0;
+  font-family: var(--typography-body-sm-font-family);
+  font-size: var(--typography-body-sm-font-size);
+  line-height: 1.5;
+}

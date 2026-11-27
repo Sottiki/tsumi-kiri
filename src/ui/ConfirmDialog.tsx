@@ -3,6 +3,8 @@
  *
  * 取り返しのつきにくい操作の前に、本当に行うかを聞く。
  * 段階6ではタスクの削除に使い、段階8のPJTの削除・バックアップの上書きでも使い回す。
+ * 実行するボタンは、削除なら赤（button-danger）、バックアップの上書きなら主ボタン（button-primary）にする
+ * （DESIGN.md：赤は削除にだけ使う。決定事項83）。
  *
  * ■ 作り
  * HTML の <dialog> 要素を showModal() で開く。こうすると、ブラウザが次のことをしてくれる：
@@ -30,6 +32,8 @@ interface ConfirmDialogProps {
   messages: readonly string[];
   /** 実行するボタンの文字（例：「削除」） */
   confirmLabel: string;
+  /** 実行するボタンの見た目。danger は赤（削除）、primary は青の主ボタン（上書き）。省略すると danger */
+  confirmVariant?: 'danger' | 'primary';
   onConfirm: () => void;
   /** キャンセル・Esc キーのとき */
   onCancel: () => void;
@@ -39,6 +43,7 @@ export function ConfirmDialog({
   title,
   messages,
   confirmLabel,
+  confirmVariant = 'danger',
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -83,7 +88,11 @@ export function ConfirmDialog({
         <button type="button" className={controls.secondary} autoFocus onClick={onCancel}>
           キャンセル
         </button>
-        <button type="button" className={controls.danger} onClick={onConfirm}>
+        <button
+          type="button"
+          className={confirmVariant === 'danger' ? controls.danger : controls.primary}
+          onClick={onConfirm}
+        >
           {confirmLabel}
         </button>
       </div>

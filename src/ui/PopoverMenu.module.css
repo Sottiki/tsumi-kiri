@@ -1,0 +1,53 @@
+/*
+ * ボタンの下に開く小さなメニュー（DESIGN.md の Components Not In The Mockup：メニュー）
+ *
+ * 画面案にない部品なので、確認ダイアログ・詳細パネルと同じ「浮いた面」の見た目にそろえる：
+ * 白い面・border の枠・詳細パネルと同じ影。角丸はボタンより一回り大きい md。
+ */
+
+.menu {
+  /* ブラウザの既定（画面の真ん中に置く・枠と余白）を消し、ボタンの下に置く（位置は PopoverMenu.tsx が決める） */
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  min-width: 160px;
+  padding: var(--spacing-2xs);
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rounded-md);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+}
+
+/* 項目：幅いっぱいのボタン。文字は左に寄せる */
+.item {
+  display: block;
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 0;
+  border-radius: var(--rounded-sm);
+  background: none;
+  color: var(--color-on-surface);
+  font-family: var(--typography-body-md-font-family);
+  font-size: var(--typography-body-md-font-size);
+  font-weight: var(--typography-body-md-font-weight);
+  text-align: left;
+  cursor: pointer;
+}
+.item:hover:not(:disabled) {
+  background: var(--color-button-quiet);
+}
+/* 押せない項目（最後のPJTの「削除」）。下の説明で理由を伝える */
+.item:disabled {
+  color: var(--color-on-surface-sub);
+  cursor: default;
+}
+
+/* 項目の下に添える説明（body-sm、補足の色） */
+.note {
+  margin: 0;
+  padding: 0 var(--spacing-md) var(--spacing-sm);
+  font-family: var(--typography-body-sm-font-family);
+  font-size: var(--typography-body-sm-font-size);
+  color: var(--color-on-surface-sub);
+}
