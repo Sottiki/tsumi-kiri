@@ -354,7 +354,7 @@ export function deleteTask(project: Project, taskId: string): Project {
  * 子・孫はタスクの中に入っているので、親を動かすと子もまとめて動く。
  *
  * 引数は「動かすタスク」と「落とした先のタスク」の id。
- * ドラッグの部品（dnd-kit）が、この2つの id を教えてくれるので、その形に合わせている。
+ * 画面では、ドラッグで落とした位置から、この2つの id を決めて呼ぶ（段階7：ui/board/reorder.ts の dropTargetFor）。
  * - 下へ動かすとき：落とした先のタスクの「後ろ」に入る
  * - 上へ動かすとき：落とした先のタスクの「前」に入る
  * （配列から取り出して、落とした先の番号へ差し込む。dnd-kit の arrayMove と同じ動き）
