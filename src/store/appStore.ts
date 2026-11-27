@@ -8,7 +8,7 @@
  * - view：表示の状態（開いているタスク、折りたたみ、ハイライト）。保存しない（SPEC 3.1）
  * - computed：表示中のPJTの計算結果（通常・残業）。data が変わるたびに作り直す
  * - history：元に戻す・やり直すの履歴
- * - notice：画面に出す知らせ（保存の失敗、壊れたデータ）
+ * - notice：画面に出す知らせ（保存の失敗、壊れたデータ、Excel出力の失敗、バックアップの読み込みの失敗）
  * - actions：操作の関数
  *
  * ■ データの変え方
@@ -37,10 +37,19 @@ import { STORAGE_KEY, type AppPersistence, type PersistedState } from './persist
 // 型
 // ---------------------------------------------------------------------------
 
-/** 画面に出す知らせ */
+/**
+ * 画面に出す知らせ（SPEC 6章、決定事項84）。一度に出すのは1つで、新しい知らせが来たら置き換える。
+ * 画面では、左下に浮かせて出す（ui/NoticeToast.tsx）。
+ */
 export interface Notice {
-  /** save-error：保存に失敗した。load-error：保存データを読み込めなかった */
-  kind: 'save-error' | 'load-error';
+  /**
+   * 何の知らせか。
+   * - save-error：保存に失敗した
+   * - load-error：保存データを読み込めなかった
+   * - export-error：Excel のファイルを作れなかった（SPEC 3.3）
+   * - import-error：バックアップのファイルを読み込めなかった（決定事項83）
+   */
+  kind: 'save-error' | 'load-error' | 'export-error' | 'import-error';
   message: string;
 }
 
@@ -101,6 +110,14 @@ export interface AppActions {
   addDaysOff(daysOff: readonly DayOff[]): void;
   removeDayOff(date: DateString): void;
 
+  // --- バックアップ（SPEC 3.1、決定事項83） ---
+  /**
+   * データ全体（全PJTと休業日・有給）を、読み込んだバックアップで置き換える。
+   * 元に戻す（Ctrl+Z）の1件になるので、読み込む前の状態に戻せる。
+   * data は、呼ぶ側で fromSaved を通して確かめたものを渡す（ui/backup.ts）
+   */
+  replaceData(data: AppData): void;
+
   // --- 元に戻す・やり直す（SPEC 3.1） ---
   undo(): void;
   redo(): void;
@@ -110,6 +127,8 @@ export interface AppActions {
   openTask(taskId: string | null): void;
   /** 親タスクの開閉を切り替える */
   toggleCollapsed(taskId: string): void;
+  /** 知らせを出す。前の知らせがあれば置き換える（決定事項84） */
+  showNotice(notice: Notice): void;
   /** 知らせを閉じる */
   dismissNotice(): void;
 }
@@ -306,6 +325,10 @@ export function createAppStore(options: AppStoreOptions): AppStore {
           addDaysOff: (daysOff) => change((data) => appOps.addDaysOff(data, daysOff)),
           removeDayOff: (date) => change((data) => appOps.removeDayOff(data, date)),
 
+          // 今のデータと置き換える。change に通すので、置き換える前のデータが履歴に積まれる。
+          // 開いていたタスクが新しいデータにないときは、commit が詳細パネルを閉じる
+          replaceData: (data) => change(() => data),
+
           undo: () => {
             const step = undo(get().history, get().data);
             if (step) commit(step.data, step.history);
@@ -327,6 +350,7 @@ export function createAppStore(options: AppStoreOptions): AppStore {
               else collapsedIds.add(taskId);
               return { view: { ...s.view, collapsedIds } };
             }),
+          showNotice: (notice) => set({ notice }),
           dismissNotice: () => set({ notice: null }),
         };
 

@@ -71,3 +71,22 @@
   color: var(--color-error);
   border-color: var(--color-error-border);
 }
+
+/*
+ * icon-button-close：閉じるボタン（32px、button-quiet の地、枠なし、×のアイコン）。
+ * 休業日・有給のダイアログと、知らせで使う（詳細パネルの閉じるボタンと同じ見た目）
+ */
+.iconClose {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--color-button-quiet);
+  color: var(--color-on-surface);
+  border: 1px solid transparent;
+  border-radius: var(--rounded-sm);
+  cursor: pointer;
+}

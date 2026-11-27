@@ -312,6 +312,16 @@ export function countDescendants(project: Project, taskId: string): number {
 }
 
 /**
+ * PJTのタスクの数を数える（親・子・孫をすべて数える。工程は数えない）。
+ * PJTの削除の確認で「タスク12件も一緒に削除されます」と出すのに使う（決定事項78）。
+ */
+export function countAllTasks(project: Project): number {
+  const count = (tasks: readonly Task[]): number =>
+    tasks.reduce((sum, task) => sum + 1 + count(task.children), 0);
+  return project.phases.reduce((sum, phase) => sum + count(phase.tasks), 0);
+}
+
+/**
  * タスクを削除する。子・孫もまとめて消える（SPEC 3.2）。
  * 元に戻す（Ctrl+Z）は、段階3のストアで変更前の版に戻すことで行う。
  *

@@ -281,3 +281,56 @@ describe('詳細パネル', () => {
     expect(actions.addChildTask(grandchild!)).toBeNull();
   });
 });
+
+describe('段階8 バックアップの読み込み（データ全体の置き換え）と知らせ', () => {
+  it('replaceData で全体が置き換わり、Ctrl+Z で読み込む前に戻る（決定事項83）', () => {
+    const store = makeStore();
+    const before = store.getState().data;
+
+    // 2つのPJTと休業日を持つデータ（別のストアで作り、それを読み込む形にする）
+    const other = makeStore();
+    other.getState().actions.addProject();
+    other.getState().actions.addDaysOff([{ date: '2026-12-29', label: '年末休業' }]);
+    const imported = other.getState().data;
+
+    store.getState().actions.replaceData(imported);
+    expect(store.getState().data).toBe(imported);
+    expect(store.getState().data.projects).toHaveLength(2);
+    // 計算結果も、読み込んだデータの表示中のPJTで作り直される
+    expect(store.getState().computed.projectId).toBe(imported.activeId);
+
+    // 元に戻すと、読み込む前の中身に戻る。
+    // 元に戻すは表示の状態（タブ・モード）を今のものに合わせ直した新しいオブジェクトを返すので、中身で比べる
+    store.getState().actions.undo();
+    expect(store.getState().data).toEqual(before);
+  });
+
+  it('開いていたタスクが読み込んだデータにないときは、詳細パネルを閉じる', () => {
+    const store = makeStore();
+    const taskId = taskAt(store, 0, 0).id;
+    store.getState().actions.openTask(taskId);
+
+    // 別のストア（id の振り方が違う）で作ったデータには、同じ id のタスクはない
+    let n = 0;
+    const other = createAppStore({
+      persistence: createPersistence(createMemoryBackend()),
+      today: () => '2026-11-19',
+      makeId: () => `other${++n}`,
+    });
+    store.getState().actions.replaceData(other.getState().data);
+    expect(store.getState().view.openTaskId).toBeNull();
+  });
+
+  it('showNotice で知らせを出し、新しい知らせは前の知らせと置き換わる。dismissNotice で消える', () => {
+    const store = makeStore();
+    const { showNotice, dismissNotice } = store.getState().actions;
+    showNotice({ kind: 'export-error', message: 'Excel のファイルを作れませんでした。' });
+    showNotice({ kind: 'import-error', message: 'バックアップを読み込めませんでした。' });
+    expect(store.getState().notice).toEqual({
+      kind: 'import-error',
+      message: 'バックアップを読み込めませんでした。',
+    });
+    dismissNotice();
+    expect(store.getState().notice).toBeNull();
+  });
+});

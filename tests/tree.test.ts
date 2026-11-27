@@ -7,6 +7,7 @@ import {
   addChildTask,
   addTaskToPhase,
   canAddChild,
+  countAllTasks,
   countDescendants,
   createProject,
   createTask,
@@ -180,6 +181,19 @@ describe('2-4 タスクの削除', () => {
   it('ない id を消そうとしても何も変わらない', () => {
     const p = designProject();
     expect(deleteTask(p, 'ない id')).toBe(p);
+  });
+});
+
+describe('PJTのタスクの数（PJTの削除の確認。決定事項78）', () => {
+  it('親・子・孫をすべて数え、工程は数えない', () => {
+    let p = designProject(); // 基本設計（画面設計・DB設計）、詳細設計
+    expect(countAllTasks(p)).toBe(4);
+    p = addChildTask(p, '画面設計', task('孫'));
+    expect(countAllTasks(p)).toBe(5);
+  });
+
+  it('タスクのないPJTは 0', () => {
+    expect(countAllTasks(createProject('2026-11-19', sequentialIds()))).toBe(0);
   });
 });
 
