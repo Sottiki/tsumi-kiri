@@ -1,6 +1,6 @@
 # Tsumikiri 技術設計（architecture.md）
 
-最終更新：2026-11-25
+最終更新：2026-11-27
 状態：**確定（2026-11-21）**
 
 SPEC.md が「何を作るか」、このファイルは「どう作るか（技術）」、DESIGN.md は「どう見せるか（見た目）」を書く。食い違ったら SPEC.md を正とする。
@@ -18,7 +18,7 @@ SPEC.md が「何を作るか」、このファイルは「どう作るか（技
 | Node.js のバージョン | 26系（その時点の最新。手元・CI とも同じにする） | 決定 |
 | React のバージョン | 19 | 決定 |
 | 状態管理 | Zustand 5.0.16（版を固定する。React の外からも読み書きでき、Ctrl+Z・保存・Excel出力を素直に書ける。必要な値だけを購読でき、保存の機能にバージョンと移行の仕組みがある） | 決定 |
-| ドラッグ | dnd-kit（入れ子の並べ替えとキーボード操作に対応） | 決定 |
+| ドラッグ | @dnd-kit/core 6.3.1（版を固定する。マウスでの掴み・写し・自動スクロールを任せる。キーボードでの並べ替えは使わない：決定事項74） | 決定 |
 | スタイル | CSS Modules ＋ 色などは CSS 変数（追加のライブラリなし） | 決定 |
 | テスト | Vitest | 決定 |
 | 画面のテスト | Playwright Test（ブラウザで画面を開き、表示と操作を確かめる） | 決定 |
@@ -67,6 +67,9 @@ src/
       BoardRow.tsx     1行（工程の帯かタスクのカード、ツリー線、日付のマスとバー）
       rowLayout.ts     子の数・ツリー線・たたんで隠れる行を、行の並びから求める（React に依存しない）
       scrollToBar.ts   開いたタスクのバーへのスクロール量を、測った寸法から求める（React に依存しない）
+      reorder.ts       ドラッグでの並べ替え：兄弟とかたまり、指の位置から落とす先と青い線の行を求める（React に依存しない。段階7）
+      useRowDrag.ts    ドラッグ中の状態（掴んだタスク・青い線）と、指と行の位置を測る処理。DndContext に渡す値を返す（段階7）
+      cardPointerSensor.ts  カードを掴むマウスの部品。入力欄と開閉マークでは掴まない（段階7）
     panel/           詳細パネル（段階6）
       DetailPanel.tsx  パネル本体。開いているタスク（view.openTaskId）の全項目を出し、ストアの操作で反映する
       panelModel.ts    前後のタスク、親タスクの選択肢、終わった分の工数、日程の表の終了日の色（React に依存しない）
@@ -276,6 +279,13 @@ App
   - 開いたときのスクロール（SPEC 3.2、決定事項71）：`Board.tsx` がバーのマス（`data-bar`）・左に固定したタスク表・見出し・パネル（`data-detail-panel`）の位置を測り、`scrollToBar.ts` がスクロールする先を決める。開いているタスクが変わったときだけ動かす
   - パネルを開いている間は、ガントの中身の右に「パネルの幅＋左右の余白」の分の空きを足す（SPEC 3.2、決定事項72。`Board.module.css` の `.contentWithPanel`）。空きがないと、ガントの終わり近くのバーは、右へスクロールしきってもパネルの下に隠れたままになるため
   - 削除の確認は `ConfirmDialog`（HTML の `<dialog>` を `showModal()` で開く）。外の部品を押せなくし、Esc でキャンセルになり、閉じたら前のフォーカスへ戻る、をブラウザに任せる
+- **ドラッグでの並べ替え（段階7）**
+  - 一覧（`Board`）を dnd-kit の `DndContext` で囲み、カード（`BoardRow` の `TaskCard`）を `useDraggable` で掴めるようにする。dnd-kit が返す `attributes`（role・tabIndex など）は付けない。カードがキーボードで止まる部品になり、ブラウザの基本の動作が変わるため（決定事項74）
+  - 掴むのはマウスだけ（`cardPointerSensor.ts`）。5px 動かしたらドラッグを始め、動かさずに離せばクリック（詳細パネルを開く）。入力欄と開閉マーク（`data-no-drag`）では掴まない
+  - 落とす先は dnd-kit の droppable を使わず、`useRowDrag.ts` が指の位置と行の位置（`getBoundingClientRect`）を、指が動くたび・枠がスクロールするたびに測り、`reorder.ts` で決める。落とせる範囲が「兄弟の行と、その下の子孫の行のかたまり」で、1つの部品ではないため
+  - 落としたら、ストアの `reorderTask`（core の `reorderTask`）で並べ替える。1回の並べ替えが元に戻すの1件になり、日程が変わった終了日は今の仕組みでハイライトされる
+  - 見た目：元の場所の行（掴んだタスクのかたまり）を薄くし、`DragOverlay` の中にカードの写し（`DragCard`）を描く。写しは縦にだけ動かし、落としたときの動きは付けない。青い線は写しに隠れないよう、写しより手前に `position: fixed` で描く（`.dropLine`）
+  - ドラッグ中の Esc は取りやめだけにする。詳細パネルは `window` で Esc を受けて閉じるので、ドラッグ中は `document` で伝わるのを止める（dnd-kit は `document` で受けて取りやめる）
 - 見た目（色・文字・寸法・部品）は DESIGN.md に従う。トークンは `ui/tokens.css` に CSS 変数として置き、CSS Modules からはその変数だけを参照する。変数名は DESIGN.md のトークン名から作る（例：`colors.primary` → `--color-primary`、`spacing.layout.day-width` → `--spacing-layout-day-width`）
 - Excel出力の色は、同じ DESIGN.md のトークンを excel/ から TypeScript の定数として参照する（CSS 変数は使えないため）。定数は `excel/colors.ts` に手で書き写し、キーはトークン名と同じにする。DESIGN.md と同じ値かは `tests/excel-colors.test.ts` が DESIGN.md を読んで確かめる（決定 2026-11-23。YAML を読むライブラリを足さずに、写し間違いと直し忘れを防ぐ）
 
